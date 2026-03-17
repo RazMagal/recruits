@@ -1,9 +1,11 @@
 package com.talhanation.recruits.world;
 
+import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.StringTag;
 
+import javax.annotation.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -24,6 +26,11 @@ public class RecruitsFaction {
     public int maxNPCs;
     public int maxNPCsPerPlayer = -1;
     private int biome = -1;
+    private boolean isNpcFaction = false;
+    @Nullable
+    private BlockPos villageCenter;
+    private long createdAtTick = 0;
+    private long leaderDeadTick = 0;
     public RecruitsFaction(String stringID, String teamLeaderName, CompoundTag banner) {
         this.stringID = stringID;
         this.teamDisplayName = stringID;
@@ -154,6 +161,39 @@ public class RecruitsFaction {
         this.maxNPCsPerPlayer = maxNPCsPerPlayer;
     }
 
+    public boolean isNpcFaction() {
+        return isNpcFaction;
+    }
+
+    public void setNpcFaction(boolean npcFaction) {
+        this.isNpcFaction = npcFaction;
+    }
+
+    @Nullable
+    public BlockPos getVillageCenter() {
+        return villageCenter;
+    }
+
+    public void setVillageCenter(@Nullable BlockPos villageCenter) {
+        this.villageCenter = villageCenter;
+    }
+
+    public long getCreatedAtTick() {
+        return createdAtTick;
+    }
+
+    public void setCreatedAtTick(long createdAtTick) {
+        this.createdAtTick = createdAtTick;
+    }
+
+    public long getLeaderDeadTick() {
+        return leaderDeadTick;
+    }
+
+    public void setLeaderDeadTick(long leaderDeadTick) {
+        this.leaderDeadTick = leaderDeadTick;
+    }
+
     @Override
     public String toString() {
         return this.getStringID();
@@ -187,6 +227,10 @@ public class RecruitsFaction {
         nbt.putInt("maxPlayers", this.maxPlayers);
         nbt.putInt("biome", this.biome);
         nbt.putInt("maxNPCsPerPlayer", this.maxNPCsPerPlayer);
+        nbt.putBoolean("isNpcFaction", this.isNpcFaction);
+        if (villageCenter != null) nbt.putLong("villageCenter", villageCenter.asLong());
+        nbt.putLong("createdAtTick", this.createdAtTick);
+        nbt.putLong("leaderDeadTick", this.leaderDeadTick);
 
         return nbt;
     }
@@ -221,6 +265,10 @@ public class RecruitsFaction {
         team.maxPlayers = nbt.getInt("maxPlayers");
         team.biome = nbt.getInt("biome");
         team.setMaxNPCsPerPlayer(nbt.getInt("maxNPCsPerPlayer"));
+        team.isNpcFaction = nbt.getBoolean("isNpcFaction");
+        if (nbt.contains("villageCenter")) team.villageCenter = BlockPos.of(nbt.getLong("villageCenter"));
+        team.createdAtTick = nbt.getLong("createdAtTick");
+        team.leaderDeadTick = nbt.getLong("leaderDeadTick");
         return team;
     }
 

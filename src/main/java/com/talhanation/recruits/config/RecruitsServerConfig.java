@@ -86,6 +86,13 @@ public class RecruitsServerConfig {
     public static ForgeConfigSpec.IntValue ChunkCost;
     public static ForgeConfigSpec.IntValue SiegeClaimsRecruitsAmount;
     public static ForgeConfigSpec.IntValue SiegeClaimsConquerTime;
+    public static ForgeConfigSpec.BooleanValue EnableNpcFactions;
+    public static ForgeConfigSpec.IntValue MaxNpcFactions;
+    public static ForgeConfigSpec.IntValue NpcFactionMinVillagers;
+    public static ForgeConfigSpec.IntValue NpcFactionLeaderGracePeriod;
+    public static ForgeConfigSpec.IntValue NpcFactionInitialClaimSize;
+    public static ForgeConfigSpec.IntValue NpcFactionMaxClaimSize;
+    public static ForgeConfigSpec.IntValue NpcFactionExpansionInterval;
     public static ForgeConfigSpec.BooleanValue NobleVillagerNeedsVillagers;
     public static ForgeConfigSpec.BooleanValue ShouldProfessionBlocksTrade;
     public static ForgeConfigSpec.BooleanValue NobleVillagerSpawn;
@@ -821,6 +828,58 @@ public class RecruitsServerConfig {
                         \tdefault: 10""")
                 .worldRestart()
                 .defineInRange("SiegeClaimsConquerTime", 10, 0, 1453);
+
+        BUILDER.pop();
+        BUILDER.comment("NPC Factions Config:").push("NpcFactions");
+
+        EnableNpcFactions = BUILDER.comment("""
+                        Should NPC villages automatically form factions when a Noble Villager is present?
+                        \t(takes effect after restart)
+                        \tdefault: true""")
+                .worldRestart()
+                .define("EnableNpcFactions", true);
+
+        MaxNpcFactions = BUILDER.comment("""
+                        Maximum number of NPC factions that can exist at once.
+                        \t(takes effect after restart)
+                        \tdefault: 8""")
+                .worldRestart()
+                .defineInRange("MaxNpcFactions", 8, 1, 64);
+
+        NpcFactionMinVillagers = BUILDER.comment("""
+                        Minimum number of villagers within 64 blocks needed for a Noble to create an NPC faction.
+                        \t(takes effect after restart)
+                        \tdefault: 5""")
+                .worldRestart()
+                .defineInRange("NpcFactionMinVillagers", 5, 1, 64);
+
+        NpcFactionLeaderGracePeriod = BUILDER.comment("""
+                        Minutes before a leaderless NPC faction dissolves after its Noble is killed.
+                        \t(takes effect after restart)
+                        \tdefault: 30""")
+                .worldRestart()
+                .defineInRange("NpcFactionLeaderGracePeriod", 30, 1, 1453);
+
+        NpcFactionInitialClaimSize = BUILDER.comment("""
+                        Number of chunks in the initial NPC faction claim (e.g. 25 = 5x5 grid).
+                        \t(takes effect after restart)
+                        \tdefault: 25""")
+                .worldRestart()
+                .defineInRange("NpcFactionInitialClaimSize", 25, 1, 100);
+
+        NpcFactionMaxClaimSize = BUILDER.comment("""
+                        Maximum number of chunks an NPC faction can claim.
+                        \t(takes effect after restart)
+                        \tdefault: 40""")
+                .worldRestart()
+                .defineInRange("NpcFactionMaxClaimSize", 40, 1, 200);
+
+        NpcFactionExpansionInterval = BUILDER.comment("""
+                        Minutes between NPC faction territory expansion attempts.
+                        \t(takes effect after restart)
+                        \tdefault: 30""")
+                .worldRestart()
+                .defineInRange("NpcFactionExpansionInterval", 30, 1, 1453);
 
         SERVER = BUILDER.build();
     }

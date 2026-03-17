@@ -2,11 +2,13 @@ package com.talhanation.recruits;
 
 import com.talhanation.recruits.config.RecruitsServerConfig;
 import com.talhanation.recruits.entities.AbstractRecruitEntity;
+import com.talhanation.recruits.entities.VillagerNobleEntity;
 import com.talhanation.recruits.inventory.*;
 import com.talhanation.recruits.network.*;
 import com.talhanation.recruits.util.DelayedExecutor;
 import com.talhanation.recruits.world.*;
 import net.minecraft.ChatFormatting;
+import net.minecraft.core.BlockPos;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.Holder;
 import net.minecraft.nbt.CompoundTag;
@@ -25,6 +27,7 @@ import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
 import net.minecraft.world.scores.Team;
 import net.minecraftforge.event.CommandEvent;
+import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.event.entity.EntityLeaveLevelEvent;
 import net.minecraftforge.event.level.LevelEvent;
@@ -45,6 +48,7 @@ public class FactionEvents {
     public static RecruitsFactionManager recruitsFactionManager;
     public static RecruitsDiplomacyManager recruitsDiplomacyManager;
     public static RecruitsTreatyManager recruitsTreatyManager;
+    public static NpcFactionAIManager npcFactionAIManager;
 
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
@@ -66,6 +70,8 @@ public class FactionEvents {
 
         recruitsTreatyManager = new RecruitsTreatyManager();
         recruitsTreatyManager.load(server.overworld());
+
+        npcFactionAIManager = new NpcFactionAIManager();
     }
 
     @SubscribeEvent
@@ -80,6 +86,16 @@ public class FactionEvents {
         recruitsFactionManager.save(server.overworld());
         recruitsDiplomacyManager.save(server.overworld());
         recruitsTreatyManager.save(server.overworld());
+    }
+
+    private int npcFactionTickCounter;
+    @SubscribeEvent
+    public void onServerTick(TickEvent.ServerTickEvent event) {
+        if (event.phase != TickEvent.Phase.END) return;
+        if (npcFactionAIManager == null) return;
+        if (++npcFactionTickCounter < 1200) return; // every 1 minute
+        npcFactionTickCounter = 0;
+        npcFactionAIManager.tick(server.overworld());
     }
 
     @SubscribeEvent
@@ -159,6 +175,42 @@ public class FactionEvents {
 
             recruitsFactionManager.save(server.overworld());
         }
+    }
+
+    public static boolean createNpcFaction(ServerLevel level, VillagerNobleEntity noble, String teamName, String displayName, ChatFormatting color, byte unitColor) {
+        MinecraftServer server = level.getServer();
+
+        if (recruitsFactionManager.isNameInUse(teamName)) return false;
+
+        long npcFactionCount = recruitsFactionManager.getFactions().stream().filter(RecruitsFaction::isNpcFaction).count();
+        if (npcFactionCount >= RecruitsServerConfig.MaxNpcFactions.get()) return false;
+
+        PlayerTeam existingTeam = server.getScoreboard().getPlayerTeam(teamName);
+        if (existingTeam != null) return false;
+
+        Scoreboard scoreboard = server.getScoreboard();
+        PlayerTeam newTeam = scoreboard.addPlayerTeam(teamName);
+        newTeam.setDisplayName(Component.literal(displayName));
+        newTeam.setColor(color);
+        newTeam.setAllowFriendlyFire(RecruitsServerConfig.GlobalTeamSetting.get() && RecruitsServerConfig.GlobalTeamFriendlyFireSetting.get());
+        newTeam.setSeeFriendlyInvisibles(RecruitsServerConfig.GlobalTeamSetting.get() && RecruitsServerConfig.GlobalTeamSeeFriendlyInvisibleSetting.get());
+
+        scoreboard.addPlayerToTeam(noble.getStringUUID(), newTeam);
+
+        ItemStack banner = Items.BROWN_BANNER.getDefaultInstance();
+        recruitsFactionManager.addTeam(teamName, displayName, noble.getUUID(), noble.getName().getString(), banner.serializeNBT(), unitColor, newTeam.getColor());
+
+        RecruitsFaction faction = recruitsFactionManager.getFactionByStringID(teamName);
+        if (faction != null) {
+            faction.setNpcFaction(true);
+            faction.setVillageCenter(noble.blockPosition());
+            faction.setCreatedAtTick(level.getGameTime());
+        }
+
+        Main.LOGGER.info("NPC Faction '{}' created by Noble at {}", displayName, noble.blockPosition());
+
+        recruitsFactionManager.save(server.overworld());
+        return true;
     }
 
     public static void leaveTeam(boolean command, ServerPlayer player, String teamName, ServerLevel level, boolean fromLeader) {

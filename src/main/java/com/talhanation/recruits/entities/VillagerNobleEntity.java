@@ -9,8 +9,10 @@ import com.talhanation.recruits.entities.ai.UseShield;
 import com.talhanation.recruits.network.MessageToClientOpenNobleTradeScreen;
 import com.talhanation.recruits.network.MessageToClientUpdateHireState;
 import com.talhanation.recruits.pathfinding.AsyncGroundPathNavigation;
+import com.talhanation.recruits.world.RecruitsFaction;
 import com.talhanation.recruits.world.RecruitsHireTrade;
 import com.talhanation.recruits.world.RecruitsHireTradesRegistry;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
@@ -19,10 +21,13 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.network.syncher.EntityDataAccessor;
 import net.minecraft.network.syncher.EntityDataSerializers;
 import net.minecraft.network.syncher.SynchedEntityData;
+import net.minecraft.resources.ResourceKey;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.DifficultyInstance;
+import net.minecraft.world.damagesource.DamageSource;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.entity.Mob;
 import net.minecraft.world.entity.MobSpawnType;
@@ -30,10 +35,14 @@ import net.minecraft.world.entity.SpawnGroupData;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.item.ItemEntity;
+import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.*;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.ServerLevelAccessor;
+import net.minecraft.world.level.biome.Biome;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.world.scores.PlayerTeam;
 import net.minecraftforge.common.ForgeMod;
 import net.minecraftforge.network.PacketDistributor;
 
@@ -52,6 +61,7 @@ public class VillagerNobleEntity extends AbstractRecruitEntity {
     public boolean isTrading;
     public boolean needsNewTrades;
     public int restoreTimeLongTime;
+    private String npcFactionId = null;
 
     public VillagerNobleEntity(EntityType<? extends AbstractRecruitEntity> entityType, Level world) {
         super(entityType, world);
@@ -91,6 +101,11 @@ public class VillagerNobleEntity extends AbstractRecruitEntity {
             this.setupTrades();
             needsNewTrades = false;
         }
+
+        // Every 2 minutes on server side, try to create faction if we don't have one
+        if (!level().isClientSide() && tickCount % 2400 == 100 && npcFactionId == null) {
+            tryCreateNpcFaction((ServerLevel) level());
+        }
     }
 
     @Override
@@ -111,6 +126,7 @@ public class VillagerNobleEntity extends AbstractRecruitEntity {
         nbt.putInt("TraderProgress", this.getTraderProgress());
         nbt.putInt("TraderLevel", this.getTraderLevel());
         nbt.putString("Type", this.getTraderType());
+        if (npcFactionId != null) nbt.putString("NpcFactionId", npcFactionId);
     }
 
     @Override
@@ -120,6 +136,7 @@ public class VillagerNobleEntity extends AbstractRecruitEntity {
         this.setTraderProgress(nbt.getInt("TraderProgress"));
         this.setTraderLevel(nbt.getInt("TraderLevel"));
         this.setTraderType(nbt.getString("Type"));
+        if (nbt.contains("NpcFactionId")) npcFactionId = nbt.getString("NpcFactionId");
     }
 
         //ATTRIBUTES
@@ -367,6 +384,108 @@ public class VillagerNobleEntity extends AbstractRecruitEntity {
             }
         }
         return false;
+    }
+
+    private void tryCreateNpcFaction(ServerLevel level) {
+        // Already leads a faction
+        if (npcFactionId != null) return;
+
+        // Already on a team (player-claimed chunk), don't override
+        if (this.getTeam() != null) return;
+
+        // Config check
+        if (!RecruitsServerConfig.EnableNpcFactions.get()) return;
+
+        // Check NPC faction count limit
+        long npcFactionCount = FactionEvents.recruitsFactionManager.getFactions().stream()
+                .filter(RecruitsFaction::isNpcFaction).count();
+        if (npcFactionCount >= RecruitsServerConfig.MaxNpcFactions.get()) return;
+
+        // Count nearby villagers within 64 blocks
+        AABB searchBox = this.getBoundingBox().inflate(64);
+        List<Villager> nearbyVillagers = level.getEntitiesOfClass(Villager.class, searchBox, Villager::isAlive);
+        if (nearbyVillagers.size() < RecruitsServerConfig.NpcFactionMinVillagers.get()) return;
+
+        // Generate faction name from biome
+        String biomeName = "Unknown";
+        Optional<ResourceKey<Biome>> biomeKey = level.getBiome(this.blockPosition()).unwrapKey();
+        if (biomeKey.isPresent()) {
+            String path = biomeKey.get().location().getPath();
+            // Capitalize and format: "plains" -> "Plains"
+            biomeName = path.substring(0, 1).toUpperCase() + path.substring(1).replace("_", " ");
+        }
+
+        String[] suffixes = {"Settlement", "Hold", "Village", "Hamlet", "Domain", "Township"};
+        String suffix = suffixes[this.random.nextInt(suffixes.length)];
+        String displayName = biomeName + " " + suffix;
+        String teamName = displayName.replaceAll("[^a-zA-Z0-9]", "_").toLowerCase();
+
+        // Ensure uniqueness by appending position hash if name in use
+        if (FactionEvents.recruitsFactionManager.isNameInUse(teamName)) {
+            teamName = teamName + "_" + Math.abs(this.blockPosition().hashCode() % 1000);
+        }
+        if (FactionEvents.recruitsFactionManager.isNameInUse(teamName)) return;
+
+        // Truncate to 16 chars max for scoreboard compatibility
+        if (teamName.length() > 16) {
+            teamName = teamName.substring(0, 16);
+        }
+
+        // Pick unused color
+        ChatFormatting color = pickUnusedColor();
+        byte unitColor = (byte) color.getId();
+
+        if (FactionEvents.createNpcFaction(level, this, teamName, displayName, color, unitColor)) {
+            this.npcFactionId = teamName;
+
+            // Auto-assign nearby villagers to the new faction
+            PlayerTeam playerTeam = level.getScoreboard().getPlayerTeam(teamName);
+            if (playerTeam != null) {
+                for (Villager villager : nearbyVillagers) {
+                    level.getScoreboard().addPlayerToTeam(villager.getStringUUID(), playerTeam);
+                }
+            }
+
+            Main.LOGGER.info("Noble '{}' created NPC faction '{}' with {} villagers.", this.getName().getString(), displayName, nearbyVillagers.size());
+        }
+    }
+
+    private ChatFormatting pickUnusedColor() {
+        Set<Integer> usedColors = new HashSet<>();
+        for (RecruitsFaction faction : FactionEvents.recruitsFactionManager.getFactions()) {
+            usedColors.add(faction.getTeamColor());
+        }
+
+        ChatFormatting[] candidates = {
+            ChatFormatting.BLUE, ChatFormatting.RED, ChatFormatting.GREEN, ChatFormatting.YELLOW,
+            ChatFormatting.AQUA, ChatFormatting.LIGHT_PURPLE, ChatFormatting.GOLD, ChatFormatting.DARK_GREEN,
+            ChatFormatting.DARK_AQUA, ChatFormatting.DARK_RED, ChatFormatting.DARK_BLUE, ChatFormatting.DARK_PURPLE,
+            ChatFormatting.GRAY, ChatFormatting.DARK_GRAY, ChatFormatting.BLACK, ChatFormatting.WHITE
+        };
+
+        for (ChatFormatting candidate : candidates) {
+            if (!usedColors.contains(candidate.getId())) {
+                return candidate;
+            }
+        }
+        return ChatFormatting.WHITE;
+    }
+
+    @Override
+    public void die(DamageSource source) {
+        super.die(source);
+        if (!level().isClientSide() && npcFactionId != null) {
+            RecruitsFaction faction = FactionEvents.recruitsFactionManager.getFactionByStringID(npcFactionId);
+            if (faction != null && faction.isNpcFaction()) {
+                faction.setLeaderDeadTick(level().getServer().overworld().getGameTime());
+                FactionEvents.recruitsFactionManager.save(level().getServer().overworld());
+                Main.LOGGER.info("Noble leader of NPC Faction '{}' has died. Grace period started.", faction.getTeamDisplayName());
+            }
+        }
+    }
+
+    public String getNpcFactionId() {
+        return npcFactionId;
     }
 
     public void isTrading(boolean trading) {
