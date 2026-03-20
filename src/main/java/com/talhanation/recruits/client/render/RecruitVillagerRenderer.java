@@ -75,7 +75,11 @@ public class RecruitVillagerRenderer extends MobRenderer<AbstractRecruitEntity, 
 
     @Override
     protected void scale(AbstractRecruitEntity entitylivingbaseIn, PoseStack matrixStackIn, float partialTickTime) {
-        matrixStackIn.scale(0.9375F, 0.9375F, 0.9375F);
+        if (entitylivingbaseIn instanceof VillagerNobleEntity) {
+            matrixStackIn.scale(1.125F, 1.125F, 1.125F);
+        } else {
+            matrixStackIn.scale(0.9375F, 0.9375F, 0.9375F);
+        }
     }
 
     private static HumanoidModel.ArmPose getArmPose(AbstractInventoryEntity recruit, InteractionHand hand) {

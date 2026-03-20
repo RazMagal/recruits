@@ -31,6 +31,11 @@ public class RecruitsFaction {
     private BlockPos villageCenter;
     private long createdAtTick = 0;
     private long leaderDeadTick = 0;
+    private long lastExpansionTick = 0;
+    private long lastDiplomacyTick = 0;
+    private long lastRecruitTick = 0;
+    private long lastOffensiveTick = 0;
+    private int militaryStrength = 0;
     public RecruitsFaction(String stringID, String teamLeaderName, CompoundTag banner) {
         this.stringID = stringID;
         this.teamDisplayName = stringID;
@@ -194,6 +199,21 @@ public class RecruitsFaction {
         this.leaderDeadTick = leaderDeadTick;
     }
 
+    public long getLastExpansionTick() { return lastExpansionTick; }
+    public void setLastExpansionTick(long tick) { this.lastExpansionTick = tick; }
+
+    public long getLastDiplomacyTick() { return lastDiplomacyTick; }
+    public void setLastDiplomacyTick(long tick) { this.lastDiplomacyTick = tick; }
+
+    public long getLastRecruitTick() { return lastRecruitTick; }
+    public void setLastRecruitTick(long tick) { this.lastRecruitTick = tick; }
+
+    public long getLastOffensiveTick() { return lastOffensiveTick; }
+    public void setLastOffensiveTick(long tick) { this.lastOffensiveTick = tick; }
+
+    public int getMilitaryStrength() { return militaryStrength; }
+    public void setMilitaryStrength(int militaryStrength) { this.militaryStrength = militaryStrength; }
+
     @Override
     public String toString() {
         return this.getStringID();
@@ -231,6 +251,11 @@ public class RecruitsFaction {
         if (villageCenter != null) nbt.putLong("villageCenter", villageCenter.asLong());
         nbt.putLong("createdAtTick", this.createdAtTick);
         nbt.putLong("leaderDeadTick", this.leaderDeadTick);
+        nbt.putLong("lastExpansionTick", this.lastExpansionTick);
+        nbt.putLong("lastDiplomacyTick", this.lastDiplomacyTick);
+        nbt.putLong("lastRecruitTick", this.lastRecruitTick);
+        nbt.putLong("lastOffensiveTick", this.lastOffensiveTick);
+        nbt.putInt("militaryStrength", this.militaryStrength);
 
         return nbt;
     }
@@ -269,6 +294,11 @@ public class RecruitsFaction {
         if (nbt.contains("villageCenter")) team.villageCenter = BlockPos.of(nbt.getLong("villageCenter"));
         team.createdAtTick = nbt.getLong("createdAtTick");
         team.leaderDeadTick = nbt.getLong("leaderDeadTick");
+        team.lastExpansionTick = nbt.getLong("lastExpansionTick");
+        team.lastDiplomacyTick = nbt.getLong("lastDiplomacyTick");
+        team.lastRecruitTick = nbt.getLong("lastRecruitTick");
+        team.lastOffensiveTick = nbt.getLong("lastOffensiveTick");
+        team.militaryStrength = nbt.getInt("militaryStrength");
         return team;
     }
 

@@ -84,6 +84,12 @@ public class VillagerNobleEntity extends AbstractRecruitEntity {
             this.addParticlesAroundSelf(ParticleTypes.HAPPY_VILLAGER);
         }
 
+        if (level().isClientSide() && tickCount % 10 == 0) {
+            level().addParticle(ParticleTypes.HAPPY_VILLAGER,
+                getRandomX(0.5), getRandomY(), getRandomZ(0.5),
+                0, 0.05, 0);
+        }
+
         if(level().isClientSide()) return;
 
         if(tickCount % 20 == 0){
@@ -102,10 +108,6 @@ public class VillagerNobleEntity extends AbstractRecruitEntity {
             needsNewTrades = false;
         }
 
-        // Every 2 minutes on server side, try to create faction if we don't have one
-        if (!level().isClientSide() && tickCount % 2400 == 100 && npcFactionId == null) {
-            tryCreateNpcFaction((ServerLevel) level());
-        }
     }
 
     @Override
@@ -386,7 +388,7 @@ public class VillagerNobleEntity extends AbstractRecruitEntity {
         return false;
     }
 
-    private void tryCreateNpcFaction(ServerLevel level) {
+    public void tryCreateNpcFaction(ServerLevel level) {
         // Already leads a faction
         if (npcFactionId != null) return;
 
@@ -485,6 +487,18 @@ public class VillagerNobleEntity extends AbstractRecruitEntity {
     }
 
     public String getNpcFactionId() {
+        return npcFactionId;
+    }
+
+    public void setNpcFactionId(String id) {
+        this.npcFactionId = id;
+    }
+
+    public boolean isFactionLeader() {
+        return npcFactionId != null;
+    }
+
+    public String getFactionStringID() {
         return npcFactionId;
     }
 

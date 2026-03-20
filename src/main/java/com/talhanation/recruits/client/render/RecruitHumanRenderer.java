@@ -8,6 +8,7 @@ import com.talhanation.recruits.client.render.layer.RecruitHumanTeamColorLayer;
 import com.talhanation.recruits.compat.IWeapon;
 import com.talhanation.recruits.entities.AbstractRecruitEntity;
 import com.talhanation.recruits.entities.CrossBowmanEntity;
+import com.talhanation.recruits.entities.VillagerNobleEntity;
 import net.minecraft.client.model.HumanoidModel;
 import net.minecraft.client.renderer.entity.EntityRendererProvider;
 import net.minecraft.client.renderer.entity.layers.*;
@@ -64,6 +65,15 @@ public class RecruitHumanRenderer extends MobRenderer<AbstractRecruitEntity, Hum
 
     }
 
+
+    @Override
+    protected void scale(AbstractRecruitEntity entity, PoseStack matrixStack, float partialTick) {
+        if (entity instanceof VillagerNobleEntity) {
+            matrixStack.scale(1.125F, 1.125F, 1.125F);
+        } else {
+            matrixStack.scale(0.9375F, 0.9375F, 0.9375F);
+        }
+    }
 
     public void render(AbstractRecruitEntity recruit, float p_117789_, float p_117790_, PoseStack p_117791_, MultiBufferSource p_117792_, int p_117793_) {
         this.setModelProperties(recruit);

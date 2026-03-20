@@ -100,6 +100,10 @@ public class RecruitsServerConfig {
     public static ForgeConfigSpec.DoubleValue NpcWarDeclarationChance;
     public static ForgeConfigSpec.DoubleValue NpcAllianceChance;
     public static ForgeConfigSpec.IntValue NpcMinAgeForWar;
+    public static ForgeConfigSpec.IntValue NpcOffensiveEvaluationInterval;
+    public static ForgeConfigSpec.IntValue NpcMinGarrisonForAttack;
+    public static ForgeConfigSpec.IntValue NpcHomeDefenseReserve;
+    public static ForgeConfigSpec.IntValue NpcMaxAttackRange;
     public static ForgeConfigSpec.BooleanValue NobleVillagerNeedsVillagers;
     public static ForgeConfigSpec.BooleanValue ShouldProfessionBlocksTrade;
     public static ForgeConfigSpec.BooleanValue NobleVillagerSpawn;
@@ -936,6 +940,34 @@ public class RecruitsServerConfig {
                         \tdefault: 60""")
                 .worldRestart()
                 .defineInRange("NpcMinAgeForWar", 60, 1, 1440);
+
+        NpcOffensiveEvaluationInterval = BUILDER.comment("""
+                        Minutes between NPC faction offensive evaluations.
+                        \t(takes effect after restart)
+                        \tdefault: 20""")
+                .worldRestart()
+                .defineInRange("NpcOffensiveEvaluationInterval", 20, 1, 120);
+
+        NpcMinGarrisonForAttack = BUILDER.comment("""
+                        Minimum garrison size before an NPC faction considers launching an attack.
+                        \t(takes effect after restart)
+                        \tdefault: 15""")
+                .worldRestart()
+                .defineInRange("NpcMinGarrisonForAttack", 15, 5, 100);
+
+        NpcHomeDefenseReserve = BUILDER.comment("""
+                        Number of recruits kept at home during an offensive.
+                        \t(takes effect after restart)
+                        \tdefault: 5""")
+                .worldRestart()
+                .defineInRange("NpcHomeDefenseReserve", 5, 0, 50);
+
+        NpcMaxAttackRange = BUILDER.comment("""
+                        Maximum distance in blocks to consider attacking an enemy claim.
+                        \t(takes effect after restart)
+                        \tdefault: 300""")
+                .worldRestart()
+                .defineInRange("NpcMaxAttackRange", 300, 50, 2000);
 
         SERVER = BUILDER.build();
     }
