@@ -107,6 +107,13 @@ public class RecruitsServerConfig {
     public static ForgeConfigSpec.BooleanValue NpcFactionBuildEnabled;
     public static ForgeConfigSpec.IntValue NpcFactionBuildInterval;
     public static ForgeConfigSpec.IntValue NpcFactionMaxStructures;
+    public static ForgeConfigSpec.BooleanValue NpcAggressionTowardPlayers;
+    public static ForgeConfigSpec.DoubleValue NpcWarChanceVsPlayer;
+    public static ForgeConfigSpec.IntValue NpcMinPlayerStrengthForWar;
+    public static ForgeConfigSpec.BooleanValue NpcHostileToUnaffiliated;
+    public static ForgeConfigSpec.IntValue NpcUnaffiliatedWarningTicks;
+    public static ForgeConfigSpec.BooleanValue NpcProvocationEnabled;
+    public static ForgeConfigSpec.IntValue NpcProvocationThreshold;
     public static ForgeConfigSpec.IntValue RocketeerCost;
     public static ForgeConfigSpec.IntValue MortarmanCost;
     public static ForgeConfigSpec.IntValue SaboteurCost;
@@ -1073,6 +1080,57 @@ public class RecruitsServerConfig {
                         \tdefault: 25""")
                 .worldRestart()
                 .defineInRange("NpcFactionMaxStructures", 25, 1, 100);
+
+        NpcAggressionTowardPlayers = BUILDER.comment("""
+                        Should NPC factions be able to declare war on player factions?
+                        \t(takes effect after restart)
+                        \tdefault: true""")
+                .worldRestart()
+                .define("NpcAggressionTowardPlayers", true);
+
+        NpcWarChanceVsPlayer = BUILDER.comment("""
+                        Probability (0.0-1.0) of an NPC faction declaring war on a player faction per evaluation.
+                        \t(takes effect after restart)
+                        \tdefault: 0.1""")
+                .worldRestart()
+                .defineInRange("NpcWarChanceVsPlayer", 0.1, 0.0, 1.0);
+
+        NpcMinPlayerStrengthForWar = BUILDER.comment("""
+                        Minimum military strength a player faction must have before NPCs will consider declaring war.
+                        Protects new or small player factions from being attacked.
+                        \t(takes effect after restart)
+                        \tdefault: 5""")
+                .worldRestart()
+                .defineInRange("NpcMinPlayerStrengthForWar", 5, 0, 100);
+
+        NpcHostileToUnaffiliated = BUILDER.comment("""
+                        Should NPC faction garrisons attack players without a faction who trespass in their territory?
+                        \t(takes effect after restart)
+                        \tdefault: false""")
+                .worldRestart()
+                .define("NpcHostileToUnaffiliated", false);
+
+        NpcUnaffiliatedWarningTicks = BUILDER.comment("""
+                        Ticks to warn an unaffiliated trespasser before garrison attacks (20 ticks = 1 second).
+                        \t(takes effect after restart)
+                        \tdefault: 600""")
+                .worldRestart()
+                .defineInRange("NpcUnaffiliatedWarningTicks", 600, 100, 6000);
+
+        NpcProvocationEnabled = BUILDER.comment("""
+                        Should killing NPC faction members or breaking blocks in their territory provoke war?
+                        \t(takes effect after restart)
+                        \tdefault: true""")
+                .worldRestart()
+                .define("NpcProvocationEnabled", true);
+
+        NpcProvocationThreshold = BUILDER.comment("""
+                        Provocation score needed to trigger an NPC faction declaring war.
+                        Recruit kill = 25 points, villager kill = 40, block break = 5.
+                        \t(takes effect after restart)
+                        \tdefault: 100""")
+                .worldRestart()
+                .defineInRange("NpcProvocationThreshold", 100, 10, 1000);
 
         SERVER = BUILDER.build();
     }

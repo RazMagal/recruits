@@ -455,6 +455,13 @@ public class RecruitEvents {
                     || player.isSpectator()
             )
                 return false;
+
+            // Unaffiliated trespasser: teamless player marked hostile by recruit's faction
+            if (player.getTeam() == null && recruit.getTeam() != null) {
+                if (ClaimEvents.isPlayerHostileToFaction(player.getUUID(), recruit.getTeam().getName())) {
+                    return true;
+                }
+            }
         }
         return canHarmTeam(attacker, player);
     }
@@ -566,6 +573,22 @@ public class RecruitEvents {
                 float newMorale = currentMoral - 0.1F;
                 entity.setMoral(Math.max(newMorale, 0F));
             });
+        }
+
+        // Combat provocation: player kills NPC faction member
+        if (RecruitsServerConfig.NpcProvocationEnabled.get() && event.getSource().getEntity() instanceof Player killer) {
+            LivingEntity killed = event.getEntity();
+            if (killed.getTeam() != null && killer.getTeam() != null) {
+                String victimTeamId = killed.getTeam().getName();
+                String killerTeamId = killer.getTeam().getName();
+                if (!victimTeamId.equals(killerTeamId)) {
+                    RecruitsFaction victimFaction = FactionEvents.recruitsFactionManager.getFactionByStringID(victimTeamId);
+                    if (victimFaction != null && victimFaction.isNpcFaction()) {
+                        int provocation = (killed instanceof AbstractRecruitEntity) ? 25 : 40;
+                        ClaimEvents.incrementProvocation(victimTeamId, killerTeamId, provocation);
+                    }
+                }
+            }
         }
     }
 

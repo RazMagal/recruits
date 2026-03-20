@@ -9,8 +9,11 @@ import com.talhanation.recruits.entities.CommanderEntity;
 import com.talhanation.recruits.entities.VillagerNobleEntity;
 import com.talhanation.recruits.entities.ai.NpcOffensiveManager;
 import com.talhanation.recruits.util.NpcArmySpawner;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
+import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.level.ChunkPos;
@@ -337,7 +340,15 @@ public class NpcFactionAIManager {
             // War declaration: NEUTRAL → ENEMY (neighbors only)
             if (currentRelation == RecruitsDiplomacyManager.DiplomacyStatus.NEUTRAL
                     && canDeclareWar && areNeighbors(faction, other)) {
-                double warChance = RecruitsServerConfig.NpcWarDeclarationChance.get();
+                boolean targetIsPlayer = !other.isNpcFaction();
+                if (targetIsPlayer) {
+                    if (!RecruitsServerConfig.NpcAggressionTowardPlayers.get()) continue;
+                    if (other.getMilitaryStrength() < RecruitsServerConfig.NpcMinPlayerStrengthForWar.get()) continue;
+                }
+
+                double warChance = targetIsPlayer
+                        ? RecruitsServerConfig.NpcWarChanceVsPlayer.get()
+                        : RecruitsServerConfig.NpcWarDeclarationChance.get();
                 if (hasAllyAtWarWith(faction, other, allFactions)) warChance *= 1.5;
 
                 if (level.random.nextDouble() < warChance) {
@@ -475,5 +486,26 @@ public class NpcFactionAIManager {
         if (noble == null) return;
 
         NpcOffensiveManager.marshalAttackForce(level, noble, faction, targetClaim);
+
+        if (!targetClaim.getOwnerFaction().isNpcFaction()) {
+            notifyPlayerFactionOfIncomingAttack(level, faction, targetClaim);
+        }
+    }
+
+    private void notifyPlayerFactionOfIncomingAttack(ServerLevel level, RecruitsFaction attackingFaction, RecruitsClaim targetClaim) {
+        String targetFactionId = targetClaim.getOwnerFactionStringID();
+        PlayerTeam team = level.getScoreboard().getPlayerTeam(targetFactionId);
+        if (team == null) return;
+
+        Component message = Component.literal("[War] ")
+                .withStyle(ChatFormatting.DARK_RED)
+                .append(Component.literal(attackingFaction.getTeamDisplayName() + " is marching an army toward your territory!")
+                        .withStyle(ChatFormatting.RED));
+
+        for (ServerPlayer player : level.getServer().getPlayerList().getPlayers()) {
+            if (player.getTeam() != null && player.getTeam().getName().equals(targetFactionId)) {
+                player.sendSystemMessage(message);
+            }
+        }
     }
 }

@@ -1,6 +1,7 @@
 package com.talhanation.recruits;
 
 import com.talhanation.recruits.config.RecruitsServerConfig;
+import net.minecraft.network.chat.Component;
 import com.talhanation.recruits.entities.AbstractRecruitEntity;
 import com.talhanation.recruits.entities.VillagerNobleEntity;
 import com.talhanation.recruits.util.ClaimUtil;
@@ -38,13 +39,32 @@ import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class ClaimEvents {
 
     public static MinecraftServer server;
     public static RecruitsClaimManager recruitsClaimManager;
+
+    // Provocation tracking: npcFactionID → playerFactionID → score
+    private static final Map<String, Map<String, Integer>> provocationScores = new ConcurrentHashMap<>();
+
+    // Unaffiliated trespasser tracking: playerUUID → (claimFactionID → firstSeenTick)
+    private static final Map<UUID, Map<String, Long>> trespasserFirstSeen = new ConcurrentHashMap<>();
+
+    // Players marked hostile by NPC factions: factionID → set of hostile player UUIDs
+    private static final Map<String, Set<UUID>> hostilePlayers = new ConcurrentHashMap<>();
+
+    public static void incrementProvocation(String npcFactionId, String playerFactionId, int amount) {
+        provocationScores.computeIfAbsent(npcFactionId, k -> new ConcurrentHashMap<>())
+                .merge(playerFactionId, amount, Integer::sum);
+    }
+
+    public static boolean isPlayerHostileToFaction(UUID playerUUID, String factionId) {
+        Set<UUID> hostiles = hostilePlayers.get(factionId);
+        return hostiles != null && hostiles.contains(playerUUID);
+    }
 
     @SubscribeEvent
     public void onServerStarting(ServerStartingEvent event) {
@@ -97,6 +117,15 @@ public class ClaimEvents {
 
             for(LivingEntity livingEntity : entities){
                 takeOverVillager(level, claim, livingEntity);
+
+                // Unaffiliated player territorial defense
+                if (livingEntity instanceof ServerPlayer serverPlayer && serverPlayer.getTeam() == null
+                        && RecruitsServerConfig.NpcHostileToUnaffiliated.get()) {
+                    RecruitsFaction claimFaction = FactionEvents.recruitsFactionManager.getFactionByStringID(claim.getOwnerFactionStringID());
+                    if (claimFaction != null && claimFaction.isNpcFaction()) {
+                        handleUnaffiliatedTrespasser(level, serverPlayer, claim);
+                    }
+                }
 
                 if(livingEntity.isAlive() && livingEntity.getTeam() != null){
                     String teamName = livingEntity.getTeam().getName();
@@ -164,6 +193,11 @@ public class ClaimEvents {
                 sendVillagersHome(level, claim);
             }
         }
+
+        // Provocation threshold check → declare war
+        if (RecruitsServerConfig.NpcProvocationEnabled.get()) {
+            checkProvocationThresholds(server.overworld());
+        }
     }
 
     private void takeOverVillager(ServerLevel level, RecruitsClaim claim, LivingEntity livingEntity) {
@@ -208,6 +242,15 @@ public class ClaimEvents {
         if(!claim.isBlockBreakingAllowed()){
             boolean isInTeam = player.getTeam() != null && player.getTeam().getName().equals(claim.getOwnerFactionStringID());
             if(!isInTeam) event.setCanceled(true);
+        }
+
+        // Provocation: player from different faction breaks block in NPC claim
+        if (claim != null && RecruitsServerConfig.NpcProvocationEnabled.get()) {
+            RecruitsFaction ownerFaction = FactionEvents.recruitsFactionManager.getFactionByStringID(claim.getOwnerFactionStringID());
+            if (ownerFaction != null && ownerFaction.isNpcFaction()
+                    && player.getTeam() != null && !player.getTeam().getName().equals(claim.getOwnerFactionStringID())) {
+                incrementProvocation(claim.getOwnerFactionStringID(), player.getTeam().getName(), 5);
+            }
         }
 
     }
@@ -286,6 +329,55 @@ public class ClaimEvents {
                 boolean isInTeam = player.getTeam() != null && player.getTeam().getName().equals(claim.getOwnerFactionStringID());
                 if(!isInTeam) event.setCanceled(true);
             }
+        }
+    }
+
+    private void checkProvocationThresholds(ServerLevel level) {
+        int threshold = RecruitsServerConfig.NpcProvocationThreshold.get();
+        Iterator<Map.Entry<String, Map<String, Integer>>> it = provocationScores.entrySet().iterator();
+        while (it.hasNext()) {
+            Map.Entry<String, Map<String, Integer>> entry = it.next();
+            String npcFactionId = entry.getKey();
+            Map<String, Integer> targets = entry.getValue();
+
+            Iterator<Map.Entry<String, Integer>> targetIt = targets.entrySet().iterator();
+            while (targetIt.hasNext()) {
+                Map.Entry<String, Integer> targetEntry = targetIt.next();
+                if (targetEntry.getValue() >= threshold) {
+                    String playerFactionId = targetEntry.getKey();
+                    FactionEvents.recruitsDiplomacyManager.setRelation(
+                            npcFactionId, playerFactionId,
+                            RecruitsDiplomacyManager.DiplomacyStatus.ENEMY, level, true
+                    );
+                    Main.LOGGER.info("NPC Faction '{}' declared war on '{}' due to provocation!",
+                            npcFactionId, playerFactionId);
+                    targetIt.remove();
+                }
+            }
+            if (targets.isEmpty()) it.remove();
+        }
+    }
+
+    private void handleUnaffiliatedTrespasser(ServerLevel level, ServerPlayer player, RecruitsClaim claim) {
+        String factionId = claim.getOwnerFactionStringID();
+        long currentTick = level.getGameTime();
+
+        Map<String, Long> playerSeen = trespasserFirstSeen.computeIfAbsent(player.getUUID(), k -> new HashMap<>());
+        Long firstSeen = playerSeen.get(factionId);
+
+        if (firstSeen == null) {
+            // First detection — warn the player
+            playerSeen.put(factionId, currentTick);
+            RecruitsFaction faction = FactionEvents.recruitsFactionManager.getFactionByStringID(factionId);
+            String factionName = faction != null ? faction.getTeamDisplayName() : factionId;
+            player.sendSystemMessage(
+                    Component.literal("[Warning] ").withStyle(net.minecraft.ChatFormatting.GOLD)
+                            .append(Component.literal("You are trespassing on " + factionName + "'s territory. Leave or face consequences.")
+                                    .withStyle(net.minecraft.ChatFormatting.YELLOW))
+            );
+        } else if (currentTick - firstSeen >= RecruitsServerConfig.NpcUnaffiliatedWarningTicks.get()) {
+            // Grace period expired — mark player as hostile
+            hostilePlayers.computeIfAbsent(factionId, k -> ConcurrentHashMap.newKeySet()).add(player.getUUID());
         }
     }
 
