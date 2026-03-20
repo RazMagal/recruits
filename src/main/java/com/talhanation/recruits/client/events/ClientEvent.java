@@ -51,6 +51,11 @@ public class ClientEvent {
             //OTHER
             EntityRenderers.register(ModEntityTypes.VILLAGER_NOBLE.get(), RecruitVillagerRenderer::new );
 
+            //SPECIALISTS
+            EntityRenderers.register(ModEntityTypes.ROCKETEER.get(), RecruitVillagerRenderer::new );
+            EntityRenderers.register(ModEntityTypes.MORTARMAN.get(), RecruitVillagerRenderer::new );
+            EntityRenderers.register(ModEntityTypes.SABOTEUR.get(), RecruitVillagerRenderer::new );
+
         }
         else {
             EntityRenderers.register(ModEntityTypes.RECRUIT.get(), RecruitHumanRenderer::new);
@@ -68,9 +73,16 @@ public class ClientEvent {
 
             //OTHER
             EntityRenderers.register(ModEntityTypes.VILLAGER_NOBLE.get(), RecruitHumanRenderer::new );
+
+            //SPECIALISTS
+            EntityRenderers.register(ModEntityTypes.ROCKETEER.get(), RecruitHumanRenderer::new );
+            EntityRenderers.register(ModEntityTypes.MORTARMAN.get(), RecruitHumanRenderer::new );
+            EntityRenderers.register(ModEntityTypes.SABOTEUR.get(), RecruitHumanRenderer::new );
         }
 
         EntityRenderers.register(ModEntityTypes.BACKTAB_PROJECTILE.get(), ThrownItemRenderer::new);
+        EntityRenderers.register(ModEntityTypes.ROCKET_PROJECTILE.get(), ThrownItemRenderer::new);
+        EntityRenderers.register(ModEntityTypes.MORTAR_PROJECTILE.get(), ThrownItemRenderer::new);
     }
 
     @SubscribeEvent

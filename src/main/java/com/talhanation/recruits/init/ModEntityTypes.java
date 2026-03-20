@@ -90,12 +90,47 @@ public class ModEntityTypes {
                     .canSpawnFarFromPlayer()
                     .build(new ResourceLocation(Main.MOD_ID, "villager_noble").toString()));
 
+    public static final RegistryObject<EntityType<RocketeerEntity>> ROCKETEER = ENTITY_TYPES.register("rocketeer",
+            () -> EntityType.Builder.of(RocketeerEntity::new, MobCategory.CREATURE)
+                    .sized(0.6F, 1.95F)
+                    .clientTrackingRange(10)
+                    .canSpawnFarFromPlayer()
+                    .build(new ResourceLocation(Main.MOD_ID, "rocketeer").toString()));
+
+    public static final RegistryObject<EntityType<MortarmanEntity>> MORTARMAN = ENTITY_TYPES.register("mortarman",
+            () -> EntityType.Builder.of(MortarmanEntity::new, MobCategory.CREATURE)
+                    .sized(0.6F, 1.95F)
+                    .clientTrackingRange(10)
+                    .canSpawnFarFromPlayer()
+                    .build(new ResourceLocation(Main.MOD_ID, "mortarman").toString()));
+
+    public static final RegistryObject<EntityType<SaboteurEntity>> SABOTEUR = ENTITY_TYPES.register("saboteur",
+            () -> EntityType.Builder.of(SaboteurEntity::new, MobCategory.CREATURE)
+                    .sized(0.6F, 1.95F)
+                    .clientTrackingRange(10)
+                    .canSpawnFarFromPlayer()
+                    .build(new ResourceLocation(Main.MOD_ID, "saboteur").toString()));
+
     public static final RegistryObject<EntityType<BackTabEntity>> BACKTAB_PROJECTILE = ENTITY_TYPES.register("backtab_projectile",
             () -> EntityType.Builder.<BackTabEntity>of(BackTabEntity::new, MobCategory.MISC)
                     .sized(0.25F, 0.25F)
                     .clientTrackingRange(4)
                     .updateInterval(10)
                     .build(new ResourceLocation(Main.MOD_ID, "backtab_projectile").toString()));
+
+    public static final RegistryObject<EntityType<RocketProjectileEntity>> ROCKET_PROJECTILE = ENTITY_TYPES.register("rocket_projectile",
+            () -> EntityType.Builder.<RocketProjectileEntity>of(RocketProjectileEntity::new, MobCategory.MISC)
+                    .sized(0.3F, 0.3F)
+                    .clientTrackingRange(4)
+                    .updateInterval(10)
+                    .build(new ResourceLocation(Main.MOD_ID, "rocket_projectile").toString()));
+
+    public static final RegistryObject<EntityType<MortarProjectileEntity>> MORTAR_PROJECTILE = ENTITY_TYPES.register("mortar_projectile",
+            () -> EntityType.Builder.<MortarProjectileEntity>of(MortarProjectileEntity::new, MobCategory.MISC)
+                    .sized(0.25F, 0.25F)
+                    .clientTrackingRange(4)
+                    .updateInterval(10)
+                    .build(new ResourceLocation(Main.MOD_ID, "mortar_projectile").toString()));
 
     /*
     public static final RegistryObject<EntityType<AssassinEntity>> ASSASSIN = ENTITY_TYPES.register("assassin",

@@ -75,6 +75,7 @@ public class VillagerEvents {
 
         if (entity instanceof Villager villager) {
             villager.goalSelector.addGoal(0, new VillagerBecomeNobleGoal(villager));
+            villager.goalSelector.addGoal(3, new com.talhanation.recruits.entities.ai.villager.VillagerKidSnowballGoal(villager));
         }
     }
 

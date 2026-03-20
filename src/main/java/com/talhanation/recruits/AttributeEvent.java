@@ -27,5 +27,8 @@ public class AttributeEvent {
         event.put(ModEntityTypes.CAPTAIN.get(), CaptainEntity.setAttributes().build());
         event.put(ModEntityTypes.SCOUT.get(), ScoutEntity.setAttributes().build());
         event.put(ModEntityTypes.VILLAGER_NOBLE.get(), VillagerNobleEntity.setAttributes().build());
+        event.put(ModEntityTypes.ROCKETEER.get(), RocketeerEntity.setAttributes().build());
+        event.put(ModEntityTypes.MORTARMAN.get(), MortarmanEntity.setAttributes().build());
+        event.put(ModEntityTypes.SABOTEUR.get(), SaboteurEntity.setAttributes().build());
     }
 }

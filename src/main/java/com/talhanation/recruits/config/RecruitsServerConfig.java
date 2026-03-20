@@ -107,6 +107,14 @@ public class RecruitsServerConfig {
     public static ForgeConfigSpec.BooleanValue NpcFactionBuildEnabled;
     public static ForgeConfigSpec.IntValue NpcFactionBuildInterval;
     public static ForgeConfigSpec.IntValue NpcFactionMaxStructures;
+    public static ForgeConfigSpec.IntValue RocketeerCost;
+    public static ForgeConfigSpec.IntValue MortarmanCost;
+    public static ForgeConfigSpec.IntValue SaboteurCost;
+    public static ForgeConfigSpec.IntValue SaboteurTNTCount;
+    public static ForgeConfigSpec.ConfigValue<List<List<String>>> RocketeerStartEquipments;
+    public static ForgeConfigSpec.ConfigValue<List<List<String>>> MortarmanStartEquipments;
+    public static ForgeConfigSpec.ConfigValue<List<List<String>>> SaboteurStartEquipments;
+    public static ForgeConfigSpec.BooleanValue VillageKidsThrowSnowballs;
     public static ForgeConfigSpec.BooleanValue NobleVillagerNeedsVillagers;
     public static ForgeConfigSpec.BooleanValue ShouldProfessionBlocksTrade;
     public static ForgeConfigSpec.BooleanValue NobleVillagerSpawn;
@@ -138,6 +146,15 @@ public class RecruitsServerConfig {
             ));
     public static ArrayList<List<String>> START_EQUIPMENT_CROSSBOWMAN = new ArrayList<>(
             List.of(Arrays.asList("minecraft:crossbow", "", "", "", "", "")
+            ));
+    public static ArrayList<List<String>> START_EQUIPMENT_ROCKETEER = new ArrayList<>(
+            List.of(Arrays.asList("minecraft:iron_sword", "", "", "minecraft:leather_chestplate", "", "")
+            ));
+    public static ArrayList<List<String>> START_EQUIPMENT_MORTARMAN = new ArrayList<>(
+            List.of(Arrays.asList("minecraft:stone_sword", "", "", "minecraft:iron_chestplate", "", "")
+            ));
+    public static ArrayList<List<String>> START_EQUIPMENT_SABOTEUR = new ArrayList<>(
+            List.of(Arrays.asList("minecraft:iron_sword", "", "", "minecraft:leather_chestplate", "minecraft:leather_boots", "")
             ));
     public static ArrayList<String> DAMAGESOURCE = new ArrayList<>(
             Arrays.asList("inFire", "lava", "sweetBerryBush", "cactus", "lightningBolt", "inWall", "hotFloor", "outOfWorld", "drown"));//add drowning
@@ -263,6 +280,38 @@ public class RecruitsServerConfig {
                 .worldRestart()
                 .defineInRange("NomadCost", 19, 0, 1453);
 
+        RocketeerCost = BUILDER.comment("""
+
+                        The amount of currency required to hire a rocketeer.
+                        \t(takes effect after restart)
+                        \tdefault: 40""")
+                .worldRestart()
+                .defineInRange("RocketeerCost", 40, 0, 1453);
+
+        MortarmanCost = BUILDER.comment("""
+
+                        The amount of currency required to hire a mortarman.
+                        \t(takes effect after restart)
+                        \tdefault: 55""")
+                .worldRestart()
+                .defineInRange("MortarmanCost", 55, 0, 1453);
+
+        SaboteurCost = BUILDER.comment("""
+
+                        The amount of currency required to hire a saboteur.
+                        \t(takes effect after restart)
+                        \tdefault: 30""")
+                .worldRestart()
+                .defineInRange("SaboteurCost", 30, 0, 1453);
+
+        SaboteurTNTCount = BUILDER.comment("""
+
+                        The amount of TNT a saboteur spawns with.
+                        \t(takes effect after restart)
+                        \tdefault: 3""")
+                .worldRestart()
+                .defineInRange("SaboteurTNTCount", 3, 1, 64);
+
         RecruitsPayment = BUILDER.comment("""
                         
                         RecruitsPayment
@@ -380,6 +429,14 @@ public class RecruitsServerConfig {
                 .worldRestart()
                 .define("NobleVillagerNeedsVillagers", true);
 
+        VillageKidsThrowSnowballs = BUILDER.comment("""
+
+                        Should village children throw snowballs at non-faction visitors?
+                        \t(takes effect after restart)
+                        \tdefault: true""")
+                .worldRestart()
+                .define("VillageKidsThrowSnowballs", true);
+
         ShouldProfessionBlocksTrade = BUILDER.comment("""
                         
                         Should Recruits Profession Blocks be traded by Villagers?
@@ -470,6 +527,30 @@ public class RecruitsServerConfig {
                         """)
                 .worldRestart()
                 .define("NomadStartEquipments", START_EQUIPMENT_NOMAD);
+
+        RocketeerStartEquipments = BUILDER.comment("""
+
+                        Rocketeer Start Equipments
+                        Default: [["minecraft:iron_sword", "", "", "minecraft:leather_chestplate", "", ""]]
+                        """)
+                .worldRestart()
+                .define("RocketeerStartEquipments", START_EQUIPMENT_ROCKETEER);
+
+        MortarmanStartEquipments = BUILDER.comment("""
+
+                        Mortarman Start Equipments
+                        Default: [["minecraft:stone_sword", "", "", "minecraft:iron_chestplate", "", ""]]
+                        """)
+                .worldRestart()
+                .define("MortarmanStartEquipments", START_EQUIPMENT_MORTARMAN);
+
+        SaboteurStartEquipments = BUILDER.comment("""
+
+                        Saboteur Start Equipments
+                        Default: [["minecraft:iron_sword", "", "", "minecraft:leather_chestplate", "minecraft:leather_boots", ""]]
+                        """)
+                .worldRestart()
+                .define("SaboteurStartEquipments", START_EQUIPMENT_SABOTEUR);
 
         /*
         Pillager Config

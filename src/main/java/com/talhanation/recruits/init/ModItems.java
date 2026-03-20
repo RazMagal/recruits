@@ -35,8 +35,18 @@ public class ModItems {
     public static final RegistryObject<BlockItem> HORSEMAN_BLOCK = ITEMS.register("horseman_block", () -> new BlockItem(ModBlocks.HORSEMAN_BLOCK.get(), new Item.Properties()));
     public static final RegistryObject<BlockItem> NOMAD_BLOCK = ITEMS.register("nomad_block", () -> new BlockItem(ModBlocks.NOMAD_BLOCK.get(), new Item.Properties()));
 
+    public static final RegistryObject<SpawnEggItem> ROCKETEER_SPAWN_EGG = createSpawnEggItem("rocketeer", ModEntityTypes.ROCKETEER::get, 16755200, 16777045);
+    public static final RegistryObject<SpawnEggItem> MORTARMAN_SPAWN_EGG = createSpawnEggItem("mortarman", ModEntityTypes.MORTARMAN::get, 16755200, 16777045);
+    public static final RegistryObject<SpawnEggItem> SABOTEUR_SPAWN_EGG = createSpawnEggItem("saboteur", ModEntityTypes.SABOTEUR::get, 16755200, 16777045);
+
     public static final RegistryObject<Item> BACKTAB = ITEMS.register("backtab",
             () -> new BackTabItem(new Item.Properties().stacksTo(16)));
+
+    public static final RegistryObject<Item> ROCKET_ITEM = ITEMS.register("rocket",
+            () -> new com.talhanation.recruits.items.RocketItem(new Item.Properties().stacksTo(16)));
+
+    public static final RegistryObject<Item> MORTAR_ROUND = ITEMS.register("mortar_round",
+            () -> new com.talhanation.recruits.items.MortarRoundItem(new Item.Properties().stacksTo(16)));
 
     //public static final RegistryObject<Item> HELD_BANNER_ITEM = ITEMS.register("held_banner_item",() -> new HeldBannerItem((new Item.Properties()).tab(ItemGroup.TAB_COMBAT)));
 }
