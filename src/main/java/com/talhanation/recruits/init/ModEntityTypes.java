@@ -132,6 +132,13 @@ public class ModEntityTypes {
                     .updateInterval(10)
                     .build(new ResourceLocation(Main.MOD_ID, "mortar_projectile").toString()));
 
+    public static final RegistryObject<EntityType<ThrownRockEntity>> THROWN_ROCK = ENTITY_TYPES.register("thrown_rock",
+            () -> EntityType.Builder.<ThrownRockEntity>of(ThrownRockEntity::new, MobCategory.MISC)
+                    .sized(0.25F, 0.25F)
+                    .clientTrackingRange(4)
+                    .updateInterval(10)
+                    .build(new ResourceLocation(Main.MOD_ID, "thrown_rock").toString()));
+
     /*
     public static final RegistryObject<EntityType<AssassinEntity>> ASSASSIN = ENTITY_TYPES.register("assassin",
             () -> EntityType.Builder.of(AssassinEntity::new, MobCategory.CREATURE)

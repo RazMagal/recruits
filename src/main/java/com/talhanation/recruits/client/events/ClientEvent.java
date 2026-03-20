@@ -83,6 +83,7 @@ public class ClientEvent {
         EntityRenderers.register(ModEntityTypes.BACKTAB_PROJECTILE.get(), ThrownItemRenderer::new);
         EntityRenderers.register(ModEntityTypes.ROCKET_PROJECTILE.get(), ThrownItemRenderer::new);
         EntityRenderers.register(ModEntityTypes.MORTAR_PROJECTILE.get(), ThrownItemRenderer::new);
+        EntityRenderers.register(ModEntityTypes.THROWN_ROCK.get(), ThrownItemRenderer::new);
     }
 
     @SubscribeEvent

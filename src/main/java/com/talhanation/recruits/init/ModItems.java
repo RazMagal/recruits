@@ -48,5 +48,8 @@ public class ModItems {
     public static final RegistryObject<Item> MORTAR_ROUND = ITEMS.register("mortar_round",
             () -> new com.talhanation.recruits.items.MortarRoundItem(new Item.Properties().stacksTo(16)));
 
+    public static final RegistryObject<Item> ROCK = ITEMS.register("rock",
+            () -> new com.talhanation.recruits.items.RockItem(new Item.Properties()));
+
     //public static final RegistryObject<Item> HELD_BANNER_ITEM = ITEMS.register("held_banner_item",() -> new HeldBannerItem((new Item.Properties()).tab(ItemGroup.TAB_COMBAT)));
 }

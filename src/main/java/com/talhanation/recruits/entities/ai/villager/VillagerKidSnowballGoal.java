@@ -7,7 +7,7 @@ import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.entity.projectile.Snowball;
+import com.talhanation.recruits.entities.ThrownRockEntity;
 
 import java.util.List;
 
@@ -85,9 +85,9 @@ public class VillagerKidSnowballGoal extends Goal {
         double dz = this.target.getZ() - this.villager.getZ();
         double dist = Math.sqrt(dx * dx + dz * dz);
 
-        Snowball snowball = new Snowball(this.villager.level(), this.villager);
-        snowball.shoot(dx, dy + dist * 0.1, dz, 0.7F, 10.0F);
-        this.villager.level().addFreshEntity(snowball);
+        ThrownRockEntity rock = new ThrownRockEntity(this.villager.level(), this.villager);
+        rock.shoot(dx, dy + dist * 0.1, dz, 0.7F, 10.0F);
+        this.villager.level().addFreshEntity(rock);
 
         this.villager.playSound(SoundEvents.SNOW_GOLEM_SHOOT, 0.5F, 1.2F);
 
