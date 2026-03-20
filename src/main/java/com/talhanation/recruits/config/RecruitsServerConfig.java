@@ -104,6 +104,9 @@ public class RecruitsServerConfig {
     public static ForgeConfigSpec.IntValue NpcMinGarrisonForAttack;
     public static ForgeConfigSpec.IntValue NpcHomeDefenseReserve;
     public static ForgeConfigSpec.IntValue NpcMaxAttackRange;
+    public static ForgeConfigSpec.BooleanValue NpcFactionBuildEnabled;
+    public static ForgeConfigSpec.IntValue NpcFactionBuildInterval;
+    public static ForgeConfigSpec.IntValue NpcFactionMaxStructures;
     public static ForgeConfigSpec.BooleanValue NobleVillagerNeedsVillagers;
     public static ForgeConfigSpec.BooleanValue ShouldProfessionBlocksTrade;
     public static ForgeConfigSpec.BooleanValue NobleVillagerSpawn;
@@ -968,6 +971,27 @@ public class RecruitsServerConfig {
                         \tdefault: 300""")
                 .worldRestart()
                 .defineInRange("NpcMaxAttackRange", 300, 50, 2000);
+
+        NpcFactionBuildEnabled = BUILDER.comment("""
+                        Should NPC factions build structures in their settlements?
+                        \t(takes effect after restart)
+                        \tdefault: true""")
+                .worldRestart()
+                .define("NpcFactionBuildEnabled", true);
+
+        NpcFactionBuildInterval = BUILDER.comment("""
+                        Minutes between NPC faction structure building attempts.
+                        \t(takes effect after restart)
+                        \tdefault: 15""")
+                .worldRestart()
+                .defineInRange("NpcFactionBuildInterval", 15, 1, 1453);
+
+        NpcFactionMaxStructures = BUILDER.comment("""
+                        Maximum number of structures an NPC faction settlement can have.
+                        \t(takes effect after restart)
+                        \tdefault: 25""")
+                .worldRestart()
+                .defineInRange("NpcFactionMaxStructures", 25, 1, 100);
 
         SERVER = BUILDER.build();
     }

@@ -85,7 +85,13 @@ public class ClaimEvents {
             if (claim.getOwnerFaction() == null) continue;
             if (claim.isAdmin) continue;
 
-            List<LivingEntity> entities = ClaimUtil.getLivingEntitiesInClaim(level, claim, LivingEntity::isAlive);
+            // Scan claim chunks + extended range from watchtower detection bonus
+            int detectionBonus = 0;
+            RecruitsFaction ownerFactionRef = FactionEvents.recruitsFactionManager.getFactionByStringID(claim.getOwnerFactionStringID());
+            if (ownerFactionRef != null && ownerFactionRef.getSettlementData() != null) {
+                detectionBonus = ownerFactionRef.getSettlementData().getTotalDetectionBonus();
+            }
+            List<LivingEntity> entities = ClaimUtil.getLivingEntitiesInClaim(level, claim, LivingEntity::isAlive, detectionBonus);
             List<LivingEntity> attackers = new ArrayList<>();
             List<LivingEntity> defenders = new ArrayList<>();
 

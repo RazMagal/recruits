@@ -568,8 +568,182 @@ public class RecruitsAdminCommands {
                     )
                 )
             )
+            .then(Commands.literal("settlementManager")
+                .then(Commands.literal("info")
+                    .then(Commands.argument("Faction", TeamArgument.team())
+                        .executes(ctx -> settlementInfo(ctx)))
+                )
+                .then(Commands.literal("build")
+                    .then(Commands.argument("Faction", TeamArgument.team())
+                        .executes(ctx -> settlementBuild(ctx, 1)))
+                )
+                .then(Commands.literal("buildAll")
+                    .then(Commands.argument("Faction", TeamArgument.team())
+                        .executes(ctx -> settlementBuild(ctx, -1)))
+                )
+                .then(Commands.literal("setTier")
+                    .then(Commands.argument("Faction", TeamArgument.team())
+                        .then(Commands.argument("Tier", IntegerArgumentType.integer(0, 2))
+                            .executes(ctx -> settlementSetTier(ctx))))
+                )
+                .then(Commands.literal("infoAll")
+                    .executes(ctx -> settlementInfoAll(ctx))
+                )
+            )
         );
         dispatcher.register(literalBuilder);
+    }
+
+    private static int settlementInfo(CommandContext<CommandSourceStack> ctx) {
+        try {
+            PlayerTeam playerTeam = TeamArgument.getTeam(ctx, "Faction");
+            RecruitsFaction faction = FactionEvents.recruitsFactionManager.getFactionByStringID(playerTeam.getName());
+            if (faction == null) {
+                ctx.getSource().sendFailure(Component.literal("No faction found."));
+                return 0;
+            }
+            SettlementData data = faction.getSettlementData();
+            ctx.getSource().sendSuccess(() -> Component.literal("--- Settlement: " + faction.getTeamDisplayName() + " ---").withStyle(ChatFormatting.GOLD), false);
+            ctx.getSource().sendSuccess(() -> Component.literal("Tier: " + data.getTier() + " | Structures: " + data.getStructures().size()), false);
+            ctx.getSource().sendSuccess(() -> Component.literal("Health bonus: +" + data.getTotalHealthBonus()
+                    + " | Garrison bonus: +" + data.getTotalGarrisonBonus()
+                    + " | Detection bonus: +" + data.getTotalDetectionBonus()), false);
+
+            // Count by type
+            Map<SettlementStructureType, Integer> counts = new java.util.EnumMap<>(SettlementStructureType.class);
+            for (SettlementStructure s : data.getStructures()) {
+                counts.merge(s.getType(), 1, Integer::sum);
+            }
+            for (Map.Entry<SettlementStructureType, Integer> entry : counts.entrySet()) {
+                SettlementStructureType type = entry.getKey();
+                ctx.getSource().sendSuccess(() -> Component.literal("  " + type.name() + ": " + entry.getValue() + "/" + type.getMaxPerSettlement()), false);
+            }
+
+            SettlementStructureType next = data.getNextToBuild();
+            ctx.getSource().sendSuccess(() -> Component.literal("Next to build: " + (next != null ? next.name() : "NONE")).withStyle(ChatFormatting.YELLOW), false);
+            return 1;
+        } catch (Exception e) {
+            ctx.getSource().sendFailure(Component.literal("Error: " + e.getMessage()));
+            return 0;
+        }
+    }
+
+    private static int settlementBuild(CommandContext<CommandSourceStack> ctx, int count) {
+        try {
+            PlayerTeam playerTeam = TeamArgument.getTeam(ctx, "Faction");
+            RecruitsFaction faction = FactionEvents.recruitsFactionManager.getFactionByStringID(playerTeam.getName());
+            if (faction == null) {
+                ctx.getSource().sendFailure(Component.literal("No faction found."));
+                return 0;
+            }
+
+            ServerLevel level = ctx.getSource().getLevel();
+
+            // Find faction's claim
+            RecruitsClaim claim = null;
+            for (RecruitsClaim c : ClaimEvents.recruitsClaimManager.getAllClaims()) {
+                if (c.getOwnerFaction().getStringID().equals(faction.getStringID())) {
+                    claim = c;
+                    break;
+                }
+            }
+
+            if (claim == null) {
+                ctx.getSource().sendFailure(Component.literal("Faction has no claim. Triggering initial claim..."));
+                NpcFactionAIManager manager = new NpcFactionAIManager();
+                manager.tryClaimTerritory(level, faction);
+                FactionEvents.recruitsFactionManager.save(level);
+                ctx.getSource().sendSuccess(() -> Component.literal("Initial claim created. Run build again.").withStyle(ChatFormatting.GREEN), false);
+                return 1;
+            }
+
+            int built = 0;
+            int maxBuilds = count == -1 ? RecruitsServerConfig.NpcFactionMaxStructures.get() : count;
+
+            for (int i = 0; i < maxBuilds; i++) {
+                if (!SettlementBuilder.tryBuildNextStructure(level, faction, claim)) break;
+                built++;
+            }
+
+            FactionEvents.recruitsFactionManager.save(level);
+            ClaimEvents.recruitsClaimManager.broadcastClaimsToAll(level);
+
+            int finalBuilt = built;
+            SettlementData data = faction.getSettlementData();
+            ctx.getSource().sendSuccess(() -> Component.literal("Built " + finalBuilt + " structures. Total: "
+                    + data.getStructures().size() + " | Tier: " + data.getTier()).withStyle(ChatFormatting.GREEN), false);
+            return 1;
+        } catch (Exception e) {
+            ctx.getSource().sendFailure(Component.literal("Error: " + e.getMessage()));
+            return 0;
+        }
+    }
+
+    private static int settlementSetTier(CommandContext<CommandSourceStack> ctx) {
+        try {
+            PlayerTeam playerTeam = TeamArgument.getTeam(ctx, "Faction");
+            RecruitsFaction faction = FactionEvents.recruitsFactionManager.getFactionByStringID(playerTeam.getName());
+            if (faction == null) {
+                ctx.getSource().sendFailure(Component.literal("No faction found."));
+                return 0;
+            }
+
+            int targetTier = IntegerArgumentType.getInteger(ctx, "Tier");
+            ServerLevel level = ctx.getSource().getLevel();
+            SettlementData data = faction.getSettlementData();
+            long tick = level.getGameTime();
+            BlockPos center = faction.getVillageCenter() != null ? faction.getVillageCenter() : ctx.getSource().getPlayerOrException().blockPosition();
+
+            // Add prerequisite structures to reach the target tier
+            if (targetTier >= 0 && data.getCountOf(SettlementStructureType.TOWN_HALL) == 0) {
+                data.addStructure(new SettlementStructure(SettlementStructureType.TOWN_HALL, center, 0, tick));
+            }
+            if (targetTier >= 1) {
+                while (data.getCountOf(SettlementStructureType.HOUSE) < 3) {
+                    data.addStructure(new SettlementStructure(SettlementStructureType.HOUSE, center, 0, tick));
+                }
+                while (data.getCountOf(SettlementStructureType.FARM) < 2) {
+                    data.addStructure(new SettlementStructure(SettlementStructureType.FARM, center, 0, tick));
+                }
+            }
+            if (targetTier >= 2) {
+                while (data.getCountOf(SettlementStructureType.BARRACKS) < 1) {
+                    data.addStructure(new SettlementStructure(SettlementStructureType.BARRACKS, center, 0, tick));
+                }
+                while (data.getCountOf(SettlementStructureType.WALL_SEGMENT) < 4) {
+                    data.addStructure(new SettlementStructure(SettlementStructureType.WALL_SEGMENT, center, 0, tick));
+                }
+            }
+
+            FactionEvents.recruitsFactionManager.save(level);
+            ctx.getSource().sendSuccess(() -> Component.literal("Settlement tier set to " + data.getTier()
+                    + " (" + data.getStructures().size() + " structures)").withStyle(ChatFormatting.GREEN), false);
+            return 1;
+        } catch (Exception e) {
+            ctx.getSource().sendFailure(Component.literal("Error: " + e.getMessage()));
+            return 0;
+        }
+    }
+
+    private static int settlementInfoAll(CommandContext<CommandSourceStack> ctx) {
+        Collection<RecruitsFaction> factions = FactionEvents.recruitsFactionManager.getFactions();
+        int npcCount = 0;
+        for (RecruitsFaction faction : factions) {
+            if (!faction.isNpcFaction()) continue;
+            npcCount++;
+            SettlementData data = faction.getSettlementData();
+            ctx.getSource().sendSuccess(() -> Component.literal(
+                    faction.getTeamDisplayName() + " | Tier " + data.getTier()
+                            + " | " + data.getStructures().size() + " structs"
+                            + " | HP+" + data.getTotalHealthBonus()
+                            + " | Garrison+" + data.getTotalGarrisonBonus()
+                            + " | Detect+" + data.getTotalDetectionBonus()
+            ).withStyle(ChatFormatting.AQUA), false);
+        }
+        if (npcCount == 0) {
+            ctx.getSource().sendSuccess(() -> Component.literal("No NPC factions found.").withStyle(ChatFormatting.YELLOW), false);
+        }
+        return 1;
     }
 
     private static int tpToOwner(ServerLevel level, Collection<String> names) {

@@ -297,7 +297,11 @@ public class RecruitsClaim {
     }
 
     public int getMaxHealth(){
-        return 60 * RecruitsServerConfig.SiegeClaimsConquerTime.get();
+        int base = 60 * RecruitsServerConfig.SiegeClaimsConquerTime.get();
+        if (ownerFaction != null && ownerFaction.getSettlementData() != null) {
+            base += ownerFaction.getSettlementData().getTotalHealthBonus();
+        }
+        return base;
     }
     public void setUnderSiege(boolean newState, ServerLevel level) {
         if (this.isUnderSiege == newState) return;

@@ -12,9 +12,36 @@ import java.util.function.Predicate;
 
 public class ClaimUtil {
     public static List<LivingEntity> getLivingEntitiesInClaim(Level level, RecruitsClaim claim, Predicate<LivingEntity> filter) {
+        return getLivingEntitiesInClaim(level, claim, filter, 0);
+    }
+
+    public static List<LivingEntity> getLivingEntitiesInClaim(Level level, RecruitsClaim claim, Predicate<LivingEntity> filter, int detectionBonus) {
         List<LivingEntity> list = new ArrayList<>();
         for (ChunkPos chunkPos : claim.getClaimedChunks()) {
             list.addAll(getLivingEntitiesInChunk(level, chunkPos, filter));
+        }
+
+        // Extended detection range from watchtowers
+        if (detectionBonus > 0 && !claim.getClaimedChunks().isEmpty()) {
+            // Build AABB covering all claimed chunks, then inflate by detection bonus
+            int minX = Integer.MAX_VALUE, minZ = Integer.MAX_VALUE;
+            int maxX = Integer.MIN_VALUE, maxZ = Integer.MIN_VALUE;
+            for (ChunkPos cp : claim.getClaimedChunks()) {
+                if (cp.getMinBlockX() < minX) minX = cp.getMinBlockX();
+                if (cp.getMinBlockZ() < minZ) minZ = cp.getMinBlockZ();
+                if (cp.getMaxBlockX() > maxX) maxX = cp.getMaxBlockX();
+                if (cp.getMaxBlockZ() > maxZ) maxZ = cp.getMaxBlockZ();
+            }
+            AABB claimBox = new AABB(minX, -64, minZ, maxX + 1, level.getMaxBuildHeight(), maxZ + 1);
+            AABB extendedBox = claimBox.inflate(detectionBonus, 0, detectionBonus);
+
+            // Get entities in extended area that aren't already in the claim
+            List<LivingEntity> extended = level.getEntitiesOfClass(LivingEntity.class, extendedBox, filter);
+            for (LivingEntity entity : extended) {
+                if (!list.contains(entity)) {
+                    list.add(entity);
+                }
+            }
         }
         return list;
     }

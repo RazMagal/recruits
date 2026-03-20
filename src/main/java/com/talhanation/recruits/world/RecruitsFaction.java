@@ -36,6 +36,8 @@ public class RecruitsFaction {
     private long lastRecruitTick = 0;
     private long lastOffensiveTick = 0;
     private int militaryStrength = 0;
+    private SettlementData settlementData = new SettlementData();
+
     public RecruitsFaction(String stringID, String teamLeaderName, CompoundTag banner) {
         this.stringID = stringID;
         this.teamDisplayName = stringID;
@@ -214,6 +216,9 @@ public class RecruitsFaction {
     public int getMilitaryStrength() { return militaryStrength; }
     public void setMilitaryStrength(int militaryStrength) { this.militaryStrength = militaryStrength; }
 
+    public SettlementData getSettlementData() { return settlementData; }
+    public void setSettlementData(SettlementData data) { this.settlementData = data; }
+
     @Override
     public String toString() {
         return this.getStringID();
@@ -256,6 +261,7 @@ public class RecruitsFaction {
         nbt.putLong("lastRecruitTick", this.lastRecruitTick);
         nbt.putLong("lastOffensiveTick", this.lastOffensiveTick);
         nbt.putInt("militaryStrength", this.militaryStrength);
+        nbt.put("settlementData", this.settlementData.toNBT());
 
         return nbt;
     }
@@ -299,6 +305,9 @@ public class RecruitsFaction {
         team.lastRecruitTick = nbt.getLong("lastRecruitTick");
         team.lastOffensiveTick = nbt.getLong("lastOffensiveTick");
         team.militaryStrength = nbt.getInt("militaryStrength");
+        if (nbt.contains("settlementData")) {
+            team.settlementData = SettlementData.fromNBT(nbt.getCompound("settlementData"));
+        }
         return team;
     }
 

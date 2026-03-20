@@ -14,6 +14,9 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.levelgen.Heightmap;
 import net.minecraft.world.phys.AABB;
 import net.minecraft.world.scores.PlayerTeam;
 
@@ -45,10 +48,10 @@ public class NpcFactionAIManager {
                 continue;
             }
 
-            // Territory claiming
-            long expansionInterval = RecruitsServerConfig.NpcFactionExpansionInterval.get() * 60L * 20L;
-            if (currentTick - faction.getLastExpansionTick() >= expansionInterval) {
-                tryClaimTerritory(level, faction);
+            // Territory claiming and structure building
+            long buildInterval = RecruitsServerConfig.NpcFactionBuildInterval.get() * 60L * 20L;
+            if (currentTick - faction.getLastExpansionTick() >= buildInterval) {
+                tryBuildAndExpand(level, faction);
                 faction.setLastExpansionTick(currentTick);
             }
 
@@ -152,35 +155,121 @@ public class NpcFactionAIManager {
         }
     }
 
-    // ---- Territory ----
+    // ---- Territory & Building ----
+
+    public void tryBuildAndExpand(ServerLevel level, RecruitsFaction faction) {
+        if (faction.getVillageCenter() == null) return;
+
+        RecruitsClaim existingClaim = findFactionClaim(faction);
+
+        if (existingClaim == null) {
+            createInitialClaimFromVillage(level, faction);
+        } else {
+            // Build next structure — this also expands the claim as structures occupy new chunks
+            SettlementBuilder.tryBuildNextStructure(level, faction, existingClaim);
+            FactionEvents.recruitsFactionManager.save(level);
+        }
+    }
 
     public void tryClaimTerritory(ServerLevel level, RecruitsFaction faction) {
         if (faction.getVillageCenter() == null) return;
 
-        ChunkPos centerChunk = new ChunkPos(faction.getVillageCenter());
-
-        RecruitsClaim existingClaim = null;
-        for (RecruitsClaim claim : ClaimEvents.recruitsClaimManager.getAllClaims()) {
-            if (claim.getOwnerFaction().getStringID().equals(faction.getStringID())) {
-                existingClaim = claim;
-                break;
-            }
-        }
+        RecruitsClaim existingClaim = findFactionClaim(faction);
 
         if (existingClaim == null) {
-            createInitialClaim(level, faction, centerChunk);
-        } else {
-            tryExpandClaim(level, faction, existingClaim);
+            createInitialClaimFromVillage(level, faction);
         }
     }
 
-    private void createInitialClaim(ServerLevel level, RecruitsFaction faction, ChunkPos centerChunk) {
-        int size = RecruitsServerConfig.NpcFactionInitialClaimSize.get();
-        int radius = (int) Math.floor(Math.sqrt(size) / 2.0);
+    private RecruitsClaim findFactionClaim(RecruitsFaction faction) {
+        for (RecruitsClaim claim : ClaimEvents.recruitsClaimManager.getAllClaims()) {
+            if (claim.getOwnerFaction().getStringID().equals(faction.getStringID())) {
+                return claim;
+            }
+        }
+        return null;
+    }
+
+    private void createInitialClaimFromVillage(ServerLevel level, RecruitsFaction faction) {
+        BlockPos center = faction.getVillageCenter();
+        ChunkPos centerChunk = new ChunkPos(center);
+
+        // Scan for vanilla village structures to determine actual village footprint
+        Set<ChunkPos> villageChunks = scanVillageFootprint(level, center);
 
         RecruitsClaim claim = new RecruitsClaim(faction);
         claim.setCenter(centerChunk);
         claim.setPlayer(new RecruitsPlayerInfo(faction.getTeamLeaderUUID(), faction.getTeamLeaderName(), faction));
+
+        if (!villageChunks.isEmpty()) {
+            // Claim chunks that contain actual village structures
+            for (ChunkPos pos : villageChunks) {
+                if (ClaimEvents.recruitsClaimManager.getClaim(pos) == null) {
+                    claim.addChunk(pos);
+                }
+            }
+            // Also claim the center chunk if not already included
+            if (!villageChunks.contains(centerChunk) && ClaimEvents.recruitsClaimManager.getClaim(centerChunk) == null) {
+                claim.addChunk(centerChunk);
+            }
+        }
+
+        // Fallback: if scanning found too few chunks, pad with grid
+        if (claim.getClaimedChunks().size() < 4) {
+            createInitialClaimFallback(claim, centerChunk);
+        }
+
+        if (!claim.getClaimedChunks().isEmpty()) {
+            ClaimEvents.recruitsClaimManager.addOrUpdateClaim(level, claim);
+            ClaimEvents.recruitsClaimManager.save(level);
+
+            // Register discovered vanilla structures in SettlementData
+            SettlementBuilder.registerVanillaStructures(level, faction, claim, center);
+            FactionEvents.recruitsFactionManager.save(level);
+
+            Main.LOGGER.info("NPC Faction '{}' claimed {} chunks around village (structure-scanned).",
+                    faction.getTeamDisplayName(), claim.getClaimedChunks().size());
+        }
+    }
+
+    private Set<ChunkPos> scanVillageFootprint(ServerLevel level, BlockPos center) {
+        Set<ChunkPos> chunks = new HashSet<>();
+        int scanRadius = 5 * 16; // 5 chunks in blocks
+
+        for (int dx = -scanRadius; dx <= scanRadius; dx += 4) {
+            for (int dz = -scanRadius; dz <= scanRadius; dz += 4) {
+                int x = center.getX() + dx;
+                int z = center.getZ() + dz;
+                int y = level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z);
+
+                for (int dy = -3; dy <= 5; dy++) {
+                    BlockPos checkPos = new BlockPos(x, y + dy, z);
+                    BlockState state = level.getBlockState(checkPos);
+
+                    if (state.is(Blocks.BELL) || state.is(Blocks.CRAFTING_TABLE)
+                            || state.is(Blocks.COMPOSTER) || state.is(Blocks.BARREL)
+                            || isBedBlock(state)) {
+                        chunks.add(new ChunkPos(checkPos));
+                        break;
+                    }
+                }
+            }
+        }
+        return chunks;
+    }
+
+    private boolean isBedBlock(BlockState state) {
+        return state.is(Blocks.WHITE_BED) || state.is(Blocks.ORANGE_BED) || state.is(Blocks.MAGENTA_BED)
+                || state.is(Blocks.LIGHT_BLUE_BED) || state.is(Blocks.YELLOW_BED) || state.is(Blocks.LIME_BED)
+                || state.is(Blocks.PINK_BED) || state.is(Blocks.GRAY_BED) || state.is(Blocks.LIGHT_GRAY_BED)
+                || state.is(Blocks.CYAN_BED) || state.is(Blocks.PURPLE_BED) || state.is(Blocks.BLUE_BED)
+                || state.is(Blocks.BROWN_BED) || state.is(Blocks.GREEN_BED) || state.is(Blocks.RED_BED)
+                || state.is(Blocks.BLACK_BED);
+    }
+
+    private void createInitialClaimFallback(RecruitsClaim claim, ChunkPos centerChunk) {
+        int size = RecruitsServerConfig.NpcFactionInitialClaimSize.get();
+        int radius = (int) Math.floor(Math.sqrt(size) / 2.0);
 
         for (int dx = -radius; dx <= radius; dx++) {
             for (int dz = -radius; dz <= radius; dz++) {
@@ -189,49 +278,6 @@ public class NpcFactionAIManager {
                 if (ClaimEvents.recruitsClaimManager.getClaim(pos) != null) continue;
                 claim.addChunk(pos);
             }
-        }
-
-        if (!claim.getClaimedChunks().isEmpty()) {
-            ClaimEvents.recruitsClaimManager.addOrUpdateClaim(level, claim);
-            ClaimEvents.recruitsClaimManager.save(level);
-            Main.LOGGER.info("NPC Faction '{}' claimed {} chunks around village.", faction.getTeamDisplayName(), claim.getClaimedChunks().size());
-        }
-    }
-
-    private void tryExpandClaim(ServerLevel level, RecruitsFaction faction, RecruitsClaim claim) {
-        int maxSize = RecruitsServerConfig.NpcFactionMaxClaimSize.get();
-        if (claim.getClaimedChunks().size() >= maxSize) return;
-
-        Set<ChunkPos> currentChunks = new HashSet<>(claim.getClaimedChunks());
-        List<ChunkPos> candidates = new ArrayList<>();
-
-        for (ChunkPos existing : currentChunks) {
-            ChunkPos[] neighbors = {
-                new ChunkPos(existing.x + 1, existing.z),
-                new ChunkPos(existing.x - 1, existing.z),
-                new ChunkPos(existing.x, existing.z + 1),
-                new ChunkPos(existing.x, existing.z - 1)
-            };
-            for (ChunkPos neighbor : neighbors) {
-                if (!currentChunks.contains(neighbor) && ClaimEvents.recruitsClaimManager.getClaim(neighbor) == null) {
-                    if (!candidates.contains(neighbor)) {
-                        candidates.add(neighbor);
-                    }
-                }
-            }
-        }
-
-        int added = 0;
-        for (ChunkPos candidate : candidates) {
-            if (claim.getClaimedChunks().size() >= maxSize || added >= 3) break;
-            claim.addChunk(candidate);
-            added++;
-        }
-
-        if (added > 0) {
-            ClaimEvents.recruitsClaimManager.addOrUpdateClaim(level, claim);
-            ClaimEvents.recruitsClaimManager.save(level);
-            Main.LOGGER.debug("NPC Faction '{}' expanded claim by {} chunks.", faction.getTeamDisplayName(), added);
         }
     }
 
@@ -255,7 +301,8 @@ public class NpcFactionAIManager {
         );
 
         int villagerCount = level.getEntitiesOfClass(Villager.class, searchBox, Villager::isAlive).size();
-        int maxGarrison = RecruitsServerConfig.NpcFactionMaxGarrison.get();
+        int garrisonBonus = faction.getSettlementData().getTotalGarrisonBonus();
+        int maxGarrison = RecruitsServerConfig.NpcFactionMaxGarrison.get() + garrisonBonus;
         int desired = Math.min(villagerCount * 2, maxGarrison);
 
         if (existing.size() >= desired) return;
