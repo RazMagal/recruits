@@ -30,6 +30,7 @@ import net.minecraftforge.event.CommandEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.event.entity.EntityLeaveLevelEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.level.LevelEvent;
 import net.minecraftforge.event.server.ServerStartingEvent;
 import net.minecraftforge.event.server.ServerStoppingEvent;
@@ -99,16 +100,15 @@ public class FactionEvents {
     }
 
     @SubscribeEvent
-    public void onPlayerJoin(EntityJoinLevelEvent event){
-        if(event.getLevel().isClientSide()) return;
+    public void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event){
+        if(event.getEntity().getCommandSenderWorld().isClientSide()) return;
 
-        if(event.getEntity() instanceof Player player){
-            recruitsFactionManager.broadcastOnlinePlayersToAll(server.overworld());
-            recruitsFactionManager.broadcastFactionsToPlayer(player);
+        Player player = event.getEntity();
+        recruitsFactionManager.broadcastOnlinePlayersToAll(server.overworld());
+        recruitsFactionManager.broadcastFactionsToPlayer(player);
 
-            recruitsDiplomacyManager.broadcastDiplomacyMapToPlayer(player);
-            recruitsTreatyManager.broadcastTreatiesToPlayer((ServerPlayer) player);
-        }
+        recruitsDiplomacyManager.broadcastDiplomacyMapToPlayer(player);
+        recruitsTreatyManager.broadcastTreatiesToPlayer((ServerPlayer) player);
     }
 
     @SubscribeEvent

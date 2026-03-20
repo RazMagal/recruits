@@ -20,7 +20,7 @@ public class VillagerBecomeNobleGoal extends Goal {
 
     @Override
     public boolean canUse() {
-        return !this.villager.isBaby() && !villager.isSleeping() && this.villager.getVillagerData().getProfession().equals(VillagerProfession.NONE);
+        return !this.villager.isBaby() && !villager.isSleeping() && !this.villager.getVillagerData().getProfession().equals(VillagerProfession.NITWIT);
     }
 
     @Override

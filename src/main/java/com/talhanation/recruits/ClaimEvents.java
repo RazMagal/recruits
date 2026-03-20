@@ -29,6 +29,7 @@ import net.minecraft.world.phys.Vec3;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.player.PlayerInteractEvent;
 import net.minecraftforge.event.level.BlockEvent;
 import net.minecraftforge.event.level.ExplosionEvent;
@@ -65,12 +66,10 @@ public class ClaimEvents {
     }
 
     @SubscribeEvent
-    public void onPlayerJoin(EntityJoinLevelEvent event){
-        if(event.getLevel().isClientSide()) return;
+    public void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event){
+        if(event.getEntity().getCommandSenderWorld().isClientSide()) return;
 
-        if(event.getEntity() instanceof Player){
-            recruitsClaimManager.broadcastClaimsToAll(server.overworld());
-        }
+        recruitsClaimManager.broadcastClaimsToAll(server.overworld());
     }
 
     public static int counter;

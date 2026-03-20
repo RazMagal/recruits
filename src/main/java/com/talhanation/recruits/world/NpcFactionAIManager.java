@@ -83,6 +83,14 @@ public class NpcFactionAIManager {
             if (entity instanceof VillagerNobleEntity noble && noble.isAlive()) {
                 if (noble.getNpcFactionId() == null && noble.getTeam() == null) {
                     noble.tryCreateNpcFaction(level);
+
+                    // If faction was just created, claim territory immediately so it broadcasts to all players
+                    if (noble.getNpcFactionId() != null) {
+                        RecruitsFaction faction = FactionEvents.recruitsFactionManager.getFactionByStringID(noble.getNpcFactionId());
+                        if (faction != null) {
+                            tryClaimTerritory(level, faction);
+                        }
+                    }
                 }
             }
         }

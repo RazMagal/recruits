@@ -36,6 +36,7 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.event.entity.EntityJoinLevelEvent;
 import net.minecraftforge.event.entity.EntityLeaveLevelEvent;
 import net.minecraftforge.event.entity.EntityTeleportEvent;
+import net.minecraftforge.event.entity.player.PlayerEvent;
 import net.minecraftforge.event.entity.ProjectileImpactEvent;
 import net.minecraftforge.event.entity.living.LivingAttackEvent;
 import net.minecraftforge.event.entity.living.LivingDeathEvent;
@@ -143,14 +144,13 @@ public class RecruitEvents {
     }
 
     @SubscribeEvent
-    public void onPlayerJoin(EntityJoinLevelEvent event){
-        if(event.getLevel().isClientSide()) return;
+    public void onPlayerJoin(PlayerEvent.PlayerLoggedInEvent event){
+        if(event.getEntity().getCommandSenderWorld().isClientSide()) return;
 
-        if(event.getEntity() instanceof Player player){
-            recruitsPlayerUnitManager.broadCastUnitInfoToPlayer(player);
+        Player player = event.getEntity();
+        recruitsPlayerUnitManager.broadCastUnitInfoToPlayer(player);
 
-            recruitsGroupsManager.broadCastGroupsToPlayer(player);
-        }
+        recruitsGroupsManager.broadCastGroupsToPlayer(player);
     }
 
     @SubscribeEvent
