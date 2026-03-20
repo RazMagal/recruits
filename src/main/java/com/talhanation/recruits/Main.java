@@ -242,6 +242,10 @@ public class Main {
             event.accept(ModItems.VILLAGER_NOBLE_SPAWN_EGG.get());
         }
 
+        if (event.getTabKey().equals(CreativeModeTabs.COMBAT)) {
+            event.accept(ModItems.BACKTAB.get());
+        }
+
         if (event.getTabKey().equals(CreativeModeTabs.FUNCTIONAL_BLOCKS)){
             event.accept(ModBlocks.RECRUIT_BLOCK.get());
             event.accept(ModBlocks.BOWMAN_BLOCK.get());

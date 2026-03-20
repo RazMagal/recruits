@@ -2,6 +2,7 @@ package com.talhanation.recruits.init;
 
 import com.google.common.collect.Lists;
 import com.talhanation.recruits.Main;
+import com.talhanation.recruits.items.BackTabItem;
 import com.talhanation.recruits.items.RecruitsSpawnEgg;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.BlockItem;
@@ -33,6 +34,9 @@ public class ModItems {
     public static final RegistryObject<BlockItem> CROSSBOWMAN_BLOCK = ITEMS.register("crossbowman_block", () -> new BlockItem(ModBlocks.CROSSBOWMAN_BLOCK.get(), new Item.Properties()));
     public static final RegistryObject<BlockItem> HORSEMAN_BLOCK = ITEMS.register("horseman_block", () -> new BlockItem(ModBlocks.HORSEMAN_BLOCK.get(), new Item.Properties()));
     public static final RegistryObject<BlockItem> NOMAD_BLOCK = ITEMS.register("nomad_block", () -> new BlockItem(ModBlocks.NOMAD_BLOCK.get(), new Item.Properties()));
+
+    public static final RegistryObject<Item> BACKTAB = ITEMS.register("backtab",
+            () -> new BackTabItem(new Item.Properties().stacksTo(16)));
 
     //public static final RegistryObject<Item> HELD_BANNER_ITEM = ITEMS.register("held_banner_item",() -> new HeldBannerItem((new Item.Properties()).tab(ItemGroup.TAB_COMBAT)));
 }

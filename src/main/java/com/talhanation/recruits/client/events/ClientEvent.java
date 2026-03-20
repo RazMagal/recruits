@@ -11,6 +11,7 @@ import com.talhanation.recruits.init.ModEntityTypes;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.model.geom.ModelLayerLocation;
 import net.minecraft.client.renderer.entity.EntityRenderers;
+import net.minecraft.client.renderer.entity.ThrownItemRenderer;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.phys.EntityHitResult;
@@ -51,7 +52,7 @@ public class ClientEvent {
             EntityRenderers.register(ModEntityTypes.VILLAGER_NOBLE.get(), RecruitVillagerRenderer::new );
 
         }
-        else{
+        else {
             EntityRenderers.register(ModEntityTypes.RECRUIT.get(), RecruitHumanRenderer::new);
             EntityRenderers.register(ModEntityTypes.BOWMAN.get(), RecruitHumanRenderer::new );
             EntityRenderers.register(ModEntityTypes.NOMAD.get(), RecruitHumanRenderer::new );
@@ -68,6 +69,8 @@ public class ClientEvent {
             //OTHER
             EntityRenderers.register(ModEntityTypes.VILLAGER_NOBLE.get(), RecruitHumanRenderer::new );
         }
+
+        EntityRenderers.register(ModEntityTypes.BACKTAB_PROJECTILE.get(), ThrownItemRenderer::new);
     }
 
     @SubscribeEvent

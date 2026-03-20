@@ -90,6 +90,13 @@ public class ModEntityTypes {
                     .canSpawnFarFromPlayer()
                     .build(new ResourceLocation(Main.MOD_ID, "villager_noble").toString()));
 
+    public static final RegistryObject<EntityType<BackTabEntity>> BACKTAB_PROJECTILE = ENTITY_TYPES.register("backtab_projectile",
+            () -> EntityType.Builder.<BackTabEntity>of(BackTabEntity::new, MobCategory.MISC)
+                    .sized(0.25F, 0.25F)
+                    .clientTrackingRange(4)
+                    .updateInterval(10)
+                    .build(new ResourceLocation(Main.MOD_ID, "backtab_projectile").toString()));
+
     /*
     public static final RegistryObject<EntityType<AssassinEntity>> ASSASSIN = ENTITY_TYPES.register("assassin",
             () -> EntityType.Builder.of(AssassinEntity::new, MobCategory.CREATURE)
