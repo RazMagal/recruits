@@ -4,10 +4,15 @@ import com.talhanation.recruits.ClaimEvents;
 import com.talhanation.recruits.FactionEvents;
 import com.talhanation.recruits.Main;
 import com.talhanation.recruits.config.RecruitsServerConfig;
+import com.talhanation.recruits.entities.AbstractRecruitEntity;
 import com.talhanation.recruits.entities.VillagerNobleEntity;
+import com.talhanation.recruits.util.NpcArmySpawner;
+import net.minecraft.core.BlockPos;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.entity.npc.Villager;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.phys.AABB;
 import net.minecraft.world.scores.PlayerTeam;
 
 import java.util.ArrayList;
@@ -32,6 +37,8 @@ public class NpcFactionAIManager {
                 handleLeaderlessFaction(level, faction, currentTick);
             } else {
                 tryClaimTerritory(level, faction);
+                tryRecruitArmy(level, faction, currentTick);
+                evaluateDiplomacy(level, faction, currentTick);
             }
         }
     }
@@ -156,5 +163,163 @@ public class NpcFactionAIManager {
             ClaimEvents.recruitsClaimManager.save(level);
             Main.LOGGER.debug("NPC Faction '{}' expanded claim by {} chunks.", faction.getTeamDisplayName(), added);
         }
+    }
+
+    private void tryRecruitArmy(ServerLevel level, RecruitsFaction faction, long currentTick) {
+        if (faction.getVillageCenter() == null) return;
+
+        long recruitIntervalTicks = RecruitsServerConfig.NpcFactionRecruitInterval.get() * 60L * 20L;
+        long elapsed = currentTick - faction.getCreatedAtTick();
+
+        // Only recruit at intervals — use modulo to gate recruitment to fixed intervals
+        if (elapsed % recruitIntervalTicks > 1200) return;
+
+        // Find the noble leader entity
+        VillagerNobleEntity noble = null;
+        for (Entity entity : level.getEntities().getAll()) {
+            if (entity instanceof VillagerNobleEntity candidate && candidate.isAlive()) {
+                if (candidate.getUUID().equals(faction.getTeamLeaderUUID())) {
+                    noble = candidate;
+                    break;
+                }
+            }
+        }
+
+        if (noble == null) return;
+
+        PlayerTeam playerTeam = level.getScoreboard().getPlayerTeam(faction.getStringID());
+        if (playerTeam == null) return;
+
+        BlockPos center = faction.getVillageCenter();
+        AABB searchBox = new AABB(center).inflate(200);
+
+        // Count existing faction recruits
+        List<AbstractRecruitEntity> existing = level.getEntitiesOfClass(
+                AbstractRecruitEntity.class, searchBox,
+                e -> e.isAlive() && e.getTeam() != null && e.getTeam().getName().equals(faction.getStringID())
+        );
+
+        // Count villagers for desired garrison calculation
+        int villagerCount = level.getEntitiesOfClass(Villager.class, searchBox, Villager::isAlive).size();
+        int maxGarrison = RecruitsServerConfig.NpcFactionMaxGarrison.get();
+        int desired = Math.min(villagerCount * 2, maxGarrison);
+
+        if (existing.size() >= desired) return;
+
+        int toSpawn = Math.min(RecruitsServerConfig.NpcFactionRecruitsPerCycle.get(), desired - existing.size());
+
+        int spawned = NpcArmySpawner.spawnFactionGarrison(level, center, playerTeam, noble, toSpawn);
+        if (spawned > 0) {
+            faction.addNPCs(spawned);
+            FactionEvents.recruitsFactionManager.save(level);
+            Main.LOGGER.info("NPC Faction '{}' recruited {} garrison members ({}/{}).",
+                    faction.getTeamDisplayName(), spawned, existing.size() + spawned, desired);
+        }
+    }
+
+    private void evaluateDiplomacy(ServerLevel level, RecruitsFaction faction, long currentTick) {
+        long intervalTicks = RecruitsServerConfig.NpcDiplomacyEvaluationInterval.get() * 60L * 20L;
+        long elapsed = currentTick - faction.getCreatedAtTick();
+        if (elapsed % intervalTicks > 1200) return;
+
+        // Faction must be old enough to declare war
+        long ageMinutes = elapsed / (60L * 20L);
+        boolean canDeclareWar = ageMinutes >= RecruitsServerConfig.NpcMinAgeForWar.get();
+
+        List<RecruitsFaction> allFactions = new ArrayList<>(FactionEvents.recruitsFactionManager.getFactions());
+
+        for (RecruitsFaction other : allFactions) {
+            if (other.equalsFaction(faction)) continue;
+
+            RecruitsDiplomacyManager.DiplomacyStatus currentRelation =
+                    FactionEvents.recruitsDiplomacyManager.getRelation(faction.getStringID(), other.getStringID());
+
+            // War declaration: NEUTRAL → ENEMY (neighbors only)
+            if (currentRelation == RecruitsDiplomacyManager.DiplomacyStatus.NEUTRAL
+                    && canDeclareWar && areNeighbors(faction, other)) {
+                double warChance = RecruitsServerConfig.NpcWarDeclarationChance.get();
+                if (hasAllyAtWarWith(faction, other, allFactions)) warChance *= 1.5;
+
+                if (level.random.nextDouble() < warChance) {
+                    FactionEvents.recruitsDiplomacyManager.setRelation(
+                            faction.getStringID(), other.getStringID(),
+                            RecruitsDiplomacyManager.DiplomacyStatus.ENEMY, level, true
+                    );
+                    Main.LOGGER.info("NPC Faction '{}' declared war on '{}'!",
+                            faction.getTeamDisplayName(), other.getTeamDisplayName());
+                }
+            }
+
+            // Alliance formation: NEUTRAL → ALLY (common enemy, NPC factions only)
+            if (currentRelation == RecruitsDiplomacyManager.DiplomacyStatus.NEUTRAL
+                    && other.isNpcFaction() && shareCommonEnemy(faction, other, allFactions)) {
+                if (level.random.nextDouble() < RecruitsServerConfig.NpcAllianceChance.get()) {
+                    FactionEvents.recruitsDiplomacyManager.setRelation(
+                            faction.getStringID(), other.getStringID(),
+                            RecruitsDiplomacyManager.DiplomacyStatus.ALLY, level, true
+                    );
+                    Main.LOGGER.info("NPC Factions '{}' and '{}' formed an alliance!",
+                            faction.getTeamDisplayName(), other.getTeamDisplayName());
+                }
+            }
+        }
+    }
+
+    private boolean areNeighbors(RecruitsFaction a, RecruitsFaction b) {
+        // If both have village centers, use distance check
+        if (a.getVillageCenter() != null && b.getVillageCenter() != null) {
+            double distSq = a.getVillageCenter().distSqr(b.getVillageCenter());
+            return distSq < 200.0 * 200.0;
+        }
+        // For player factions (no village center), check claim proximity
+        return haveAdjacentClaims(a, b);
+    }
+
+    private boolean haveAdjacentClaims(RecruitsFaction a, RecruitsFaction b) {
+        List<RecruitsClaim> allClaims = ClaimEvents.recruitsClaimManager.getAllClaims();
+        Set<ChunkPos> chunksA = new HashSet<>();
+
+        for (RecruitsClaim claim : allClaims) {
+            if (claim.getOwnerFaction().getStringID().equals(a.getStringID())) {
+                chunksA.addAll(claim.getClaimedChunks());
+            }
+        }
+        if (chunksA.isEmpty()) return false;
+
+        for (RecruitsClaim claim : allClaims) {
+            if (!claim.getOwnerFaction().getStringID().equals(b.getStringID())) continue;
+            for (ChunkPos cb : claim.getClaimedChunks()) {
+                for (ChunkPos ca : chunksA) {
+                    if (Math.abs(ca.x - cb.x) + Math.abs(ca.z - cb.z) <= 2) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    private boolean shareCommonEnemy(RecruitsFaction a, RecruitsFaction b, List<RecruitsFaction> allFactions) {
+        for (RecruitsFaction third : allFactions) {
+            if (third.equalsFaction(a) || third.equalsFaction(b)) continue;
+            RecruitsDiplomacyManager.DiplomacyStatus relA =
+                    FactionEvents.recruitsDiplomacyManager.getRelation(a.getStringID(), third.getStringID());
+            RecruitsDiplomacyManager.DiplomacyStatus relB =
+                    FactionEvents.recruitsDiplomacyManager.getRelation(b.getStringID(), third.getStringID());
+            if (relA == RecruitsDiplomacyManager.DiplomacyStatus.ENEMY
+                    && relB == RecruitsDiplomacyManager.DiplomacyStatus.ENEMY) return true;
+        }
+        return false;
+    }
+
+    private boolean hasAllyAtWarWith(RecruitsFaction faction, RecruitsFaction enemy, List<RecruitsFaction> allFactions) {
+        for (RecruitsFaction ally : allFactions) {
+            if (ally.equalsFaction(faction) || ally.equalsFaction(enemy)) continue;
+            RecruitsDiplomacyManager.DiplomacyStatus relToUs =
+                    FactionEvents.recruitsDiplomacyManager.getRelation(faction.getStringID(), ally.getStringID());
+            RecruitsDiplomacyManager.DiplomacyStatus relToEnemy =
+                    FactionEvents.recruitsDiplomacyManager.getRelation(ally.getStringID(), enemy.getStringID());
+            if (relToUs == RecruitsDiplomacyManager.DiplomacyStatus.ALLY
+                    && relToEnemy == RecruitsDiplomacyManager.DiplomacyStatus.ENEMY) return true;
+        }
+        return false;
     }
 }

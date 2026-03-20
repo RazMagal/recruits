@@ -93,6 +93,13 @@ public class RecruitsServerConfig {
     public static ForgeConfigSpec.IntValue NpcFactionInitialClaimSize;
     public static ForgeConfigSpec.IntValue NpcFactionMaxClaimSize;
     public static ForgeConfigSpec.IntValue NpcFactionExpansionInterval;
+    public static ForgeConfigSpec.IntValue NpcFactionMaxGarrison;
+    public static ForgeConfigSpec.IntValue NpcFactionRecruitInterval;
+    public static ForgeConfigSpec.IntValue NpcFactionRecruitsPerCycle;
+    public static ForgeConfigSpec.IntValue NpcDiplomacyEvaluationInterval;
+    public static ForgeConfigSpec.DoubleValue NpcWarDeclarationChance;
+    public static ForgeConfigSpec.DoubleValue NpcAllianceChance;
+    public static ForgeConfigSpec.IntValue NpcMinAgeForWar;
     public static ForgeConfigSpec.BooleanValue NobleVillagerNeedsVillagers;
     public static ForgeConfigSpec.BooleanValue ShouldProfessionBlocksTrade;
     public static ForgeConfigSpec.BooleanValue NobleVillagerSpawn;
@@ -880,6 +887,55 @@ public class RecruitsServerConfig {
                         \tdefault: 30""")
                 .worldRestart()
                 .defineInRange("NpcFactionExpansionInterval", 30, 1, 1453);
+
+        NpcFactionMaxGarrison = BUILDER.comment("""
+                        Maximum number of armed recruits an NPC faction can maintain.
+                        \t(takes effect after restart)
+                        \tdefault: 20""")
+                .worldRestart()
+                .defineInRange("NpcFactionMaxGarrison", 20, 1, 100);
+
+        NpcFactionRecruitInterval = BUILDER.comment("""
+                        Minutes between NPC faction recruitment attempts.
+                        \t(takes effect after restart)
+                        \tdefault: 10""")
+                .worldRestart()
+                .defineInRange("NpcFactionRecruitInterval", 10, 1, 120);
+
+        NpcFactionRecruitsPerCycle = BUILDER.comment("""
+                        Maximum number of recruits spawned per recruitment cycle.
+                        \t(takes effect after restart)
+                        \tdefault: 3""")
+                .worldRestart()
+                .defineInRange("NpcFactionRecruitsPerCycle", 3, 1, 10);
+
+        NpcDiplomacyEvaluationInterval = BUILDER.comment("""
+                        Minutes between NPC faction diplomacy evaluations.
+                        \t(takes effect after restart)
+                        \tdefault: 15""")
+                .worldRestart()
+                .defineInRange("NpcDiplomacyEvaluationInterval", 15, 1, 120);
+
+        NpcWarDeclarationChance = BUILDER.comment("""
+                        Probability (0.0-1.0) of an NPC faction declaring war on a neighbor per evaluation.
+                        \t(takes effect after restart)
+                        \tdefault: 0.2""")
+                .worldRestart()
+                .defineInRange("NpcWarDeclarationChance", 0.2, 0.0, 1.0);
+
+        NpcAllianceChance = BUILDER.comment("""
+                        Probability (0.0-1.0) of NPC factions allying against a common enemy.
+                        \t(takes effect after restart)
+                        \tdefault: 0.3""")
+                .worldRestart()
+                .defineInRange("NpcAllianceChance", 0.3, 0.0, 1.0);
+
+        NpcMinAgeForWar = BUILDER.comment("""
+                        Minutes an NPC faction must exist before it can declare war.
+                        \t(takes effect after restart)
+                        \tdefault: 60""")
+                .worldRestart()
+                .defineInRange("NpcMinAgeForWar", 60, 1, 1440);
 
         SERVER = BUILDER.build();
     }
