@@ -162,6 +162,7 @@ public class RecruitsFactionManager {
         if (serverLevel == null) return;
 
         for(ServerPlayer serverPlayer : serverLevel.getServer().getPlayerList().getPlayers()){
+            if (!serverPlayer.connection.isAcceptingMessages()) continue;
             broadcastFactionsToPlayer(serverPlayer);
         }
     }
@@ -233,6 +234,7 @@ public class RecruitsFactionManager {
         }
 
         for(ServerPlayer serverPlayer : serverLevel.getServer().getPlayerList().getPlayers()){
+            if (!serverPlayer.connection.isAcceptingMessages()) continue;
             Main.SIMPLE_CHANNEL.send(PacketDistributor.PLAYER.with(()-> serverPlayer),
                     new MessageToClientUpdateOnlinePlayers(playerInfoList));
         }
@@ -242,6 +244,7 @@ public class RecruitsFactionManager {
         if (serverLevel == null) return;
 
         for(ServerPlayer serverPlayer : serverLevel.getServer().getPlayerList().getPlayers()){
+            if (!serverPlayer.connection.isAcceptingMessages()) continue;
             broadcastOwnFactionToPlayer(serverPlayer);
         }
     }

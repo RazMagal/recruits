@@ -104,7 +104,7 @@ public class FactionEvents {
         if(event.getEntity().getCommandSenderWorld().isClientSide()) return;
 
         Player player = event.getEntity();
-        recruitsFactionManager.broadcastOnlinePlayersToAll(server.overworld());
+        recruitsFactionManager.broadcastOnlinePlayersToPlayer((ServerPlayer) player, server.overworld());
         recruitsFactionManager.broadcastFactionsToPlayer(player);
 
         recruitsDiplomacyManager.broadcastDiplomacyMapToPlayer(player);

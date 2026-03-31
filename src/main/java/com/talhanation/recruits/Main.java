@@ -244,6 +244,7 @@ public class Main {
 
         if (event.getTabKey().equals(CreativeModeTabs.COMBAT)) {
             event.accept(ModItems.BACKTAB.get());
+            event.accept(ModItems.ROCK.get());
         }
 
         if (event.getTabKey().equals(CreativeModeTabs.FUNCTIONAL_BLOCKS)){

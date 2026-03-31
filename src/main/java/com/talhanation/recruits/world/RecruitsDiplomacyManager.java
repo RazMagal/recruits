@@ -139,6 +139,7 @@ public class RecruitsDiplomacyManager {
         if (serverLevel == null) return;
 
         for(ServerPlayer serverPlayer : serverLevel.players()){
+            if (!serverPlayer.connection.isAcceptingMessages()) continue;
             Main.SIMPLE_CHANNEL.send(PacketDistributor.PLAYER.with(()-> serverPlayer),
                     new MessageToClientUpdateDiplomacyList(diplomacyMap));
         }

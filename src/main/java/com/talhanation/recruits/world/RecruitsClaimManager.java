@@ -85,6 +85,7 @@ public class RecruitsClaimManager {
 
     public void broadcastClaimsToAll(ServerLevel level) {
         for (ServerPlayer player : level.getServer().getPlayerList().getPlayers()) {
+            if (!player.connection.isAcceptingMessages()) continue;
             Main.SIMPLE_CHANNEL.send(PacketDistributor.PLAYER.with(() -> player),
                     new MessageToClientUpdateClaims(
                             this.getAllClaims(),
