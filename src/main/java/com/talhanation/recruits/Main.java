@@ -240,11 +240,16 @@ public class Main {
             event.accept(ModItems.HORSEMAN_SPAWN_EGG.get());
             event.accept(ModItems.CROSSBOWMAN_SPAWN_EGG.get());
             event.accept(ModItems.VILLAGER_NOBLE_SPAWN_EGG.get());
+            event.accept(ModItems.ROCKETEER_SPAWN_EGG.get());
+            event.accept(ModItems.MORTARMAN_SPAWN_EGG.get());
+            event.accept(ModItems.SABOTEUR_SPAWN_EGG.get());
         }
 
         if (event.getTabKey().equals(CreativeModeTabs.COMBAT)) {
             event.accept(ModItems.BACKTAB.get());
             event.accept(ModItems.ROCK.get());
+            event.accept(ModItems.ROCKET_ITEM.get());
+            event.accept(ModItems.MORTAR_ROUND.get());
         }
 
         if (event.getTabKey().equals(CreativeModeTabs.FUNCTIONAL_BLOCKS)){
