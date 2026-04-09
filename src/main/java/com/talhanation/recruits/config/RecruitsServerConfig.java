@@ -155,13 +155,13 @@ public class RecruitsServerConfig {
             List.of(Arrays.asList("minecraft:crossbow", "", "", "", "", "")
             ));
     public static ArrayList<List<String>> START_EQUIPMENT_ROCKETEER = new ArrayList<>(
-            List.of(Arrays.asList("minecraft:iron_sword", "", "", "minecraft:leather_chestplate", "", "")
+            List.of(Arrays.asList("recruits:rocket", "", "", "minecraft:leather_chestplate", "", "")
             ));
     public static ArrayList<List<String>> START_EQUIPMENT_MORTARMAN = new ArrayList<>(
-            List.of(Arrays.asList("minecraft:stone_sword", "", "", "minecraft:iron_chestplate", "", "")
+            List.of(Arrays.asList("recruits:mortar_round", "", "", "minecraft:iron_chestplate", "", "")
             ));
     public static ArrayList<List<String>> START_EQUIPMENT_SABOTEUR = new ArrayList<>(
-            List.of(Arrays.asList("minecraft:iron_sword", "", "", "minecraft:leather_chestplate", "minecraft:leather_boots", "")
+            List.of(Arrays.asList("minecraft:tnt", "", "", "minecraft:leather_chestplate", "minecraft:leather_boots", "")
             ));
     public static ArrayList<String> DAMAGESOURCE = new ArrayList<>(
             Arrays.asList("inFire", "lava", "sweetBerryBush", "cactus", "lightningBolt", "inWall", "hotFloor", "outOfWorld", "drown"));//add drowning

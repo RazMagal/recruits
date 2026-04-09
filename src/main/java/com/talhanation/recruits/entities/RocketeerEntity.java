@@ -9,6 +9,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -73,6 +74,9 @@ public class RocketeerEntity extends AbstractRecruitEntity implements IRangedRec
         this.setRandomSpawnBonus();
         this.setPersistenceRequired();
 
+        // Ensure main hand holds a rocket (config may have stale sword values)
+        this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(com.talhanation.recruits.init.ModItems.ROCKET_ITEM.get()));
+
         // Give 5 rockets in slot 6
         ItemStack rockets = new ItemStack(com.talhanation.recruits.init.ModItems.ROCKET_ITEM.get());
         rockets.setCount(5);
@@ -106,7 +110,7 @@ public class RocketeerEntity extends AbstractRecruitEntity implements IRangedRec
 
     @Override
     public Predicate<ItemStack> getWeaponType() {
-        return itemStack -> itemStack.getItem() instanceof SwordItem;
+        return itemStack -> itemStack.getItem() instanceof RocketItem;
     }
 
     @Override

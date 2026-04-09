@@ -73,6 +73,9 @@ public class SaboteurEntity extends AbstractRecruitEntity {
         this.setRandomSpawnBonus();
         this.setPersistenceRequired();
 
+        // Hold TNT in main hand
+        this.setItemSlot(net.minecraft.world.entity.EquipmentSlot.MAINHAND, new ItemStack(Items.TNT));
+
         // Give 3 TNT blocks in slot 6
         ItemStack tnt = new ItemStack(Items.TNT);
         tnt.setCount(RecruitsServerConfig.SaboteurTNTCount.get());

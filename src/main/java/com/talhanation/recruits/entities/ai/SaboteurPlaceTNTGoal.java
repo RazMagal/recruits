@@ -6,6 +6,11 @@ import com.talhanation.recruits.entities.AbstractRecruitEntity;
 import com.talhanation.recruits.world.RecruitsClaim;
 import com.talhanation.recruits.world.RecruitsDiplomacyManager;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
+import net.minecraft.sounds.SoundEvents;
+import net.minecraft.sounds.SoundSource;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.ai.goal.Goal;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
@@ -23,6 +28,8 @@ public class SaboteurPlaceTNTGoal extends Goal {
     private State state;
     private int stateTimer;
 
+    private static final int FUSE_TICKS = 80; // 4 seconds
+
     private enum State {
         IDLE, INFILTRATING, PLACING, IGNITING, FLEEING
     }
@@ -38,7 +45,6 @@ public class SaboteurPlaceTNTGoal extends Goal {
         if (this.saboteur.getFleeing()) return false;
         if (!hasTNT()) return false;
 
-        // Find nearby enemy claim if we don't have a target
         if (this.targetPos == null) {
             this.targetPos = findEnemyClaimCenter();
         }
@@ -65,6 +71,7 @@ public class SaboteurPlaceTNTGoal extends Goal {
         this.targetPos = null;
         this.tntPlacedPos = null;
         this.stateTimer = 0;
+        this.saboteur.setShiftKeyDown(false);
     }
 
     @Override
@@ -90,6 +97,9 @@ public class SaboteurPlaceTNTGoal extends Goal {
 
         double distSqr = this.saboteur.blockPosition().distSqr(this.targetPos);
 
+        // Crouch when getting close
+        this.saboteur.setShiftKeyDown(distSqr < 24 * 24);
+
         // Re-path periodically
         if (this.saboteur.getNavigation().isDone() || this.stateTimer % 40 == 0) {
             this.saboteur.getNavigation().moveTo(targetPos.getX(), targetPos.getY(), targetPos.getZ(), 1.2D);
@@ -109,11 +119,9 @@ public class SaboteurPlaceTNTGoal extends Goal {
     }
 
     private void tickPlacing() {
-        // Find a suitable spot to place TNT
         BlockPos sabPos = this.saboteur.blockPosition();
         BlockPos placePos = null;
 
-        // Search in 3-block radius for a valid placement
         for (int dx = -3; dx <= 3; dx++) {
             for (int dz = -3; dz <= 3; dz++) {
                 BlockPos candidate = sabPos.offset(dx, 0, dz);
@@ -128,27 +136,61 @@ public class SaboteurPlaceTNTGoal extends Goal {
         }
 
         if (placePos != null) {
+            // Place the TNT block
             this.saboteur.level().setBlock(placePos, Blocks.TNT.defaultBlockState(), 3);
             this.tntPlacedPos = placePos;
             consumeTNT();
+
+            // Visual: swing arm + look at TNT
+            this.saboteur.swing(InteractionHand.MAIN_HAND);
+            this.saboteur.getLookControl().setLookAt(placePos.getX() + 0.5, placePos.getY() + 0.5, placePos.getZ() + 0.5);
+
+            // Audio: block place sound
+            this.saboteur.level().playSound(null, placePos,
+                    SoundEvents.WOOD_PLACE, SoundSource.BLOCKS, 1.0F, 1.0F);
+
             this.state = State.IGNITING;
-            this.stateTimer = 10; // short delay before ignition
+            this.stateTimer = FUSE_TICKS;
         } else {
-            // Can't find spot, abort
             this.state = State.IDLE;
         }
     }
 
     private void tickIgniting() {
+        if (this.tntPlacedPos == null) {
+            this.state = State.IDLE;
+            return;
+        }
+
+        // Saboteur stares at the TNT
+        this.saboteur.getLookControl().setLookAt(
+                tntPlacedPos.getX() + 0.5, tntPlacedPos.getY() + 0.5, tntPlacedPos.getZ() + 0.5);
+        this.saboteur.getNavigation().stop();
+
+        // Play TNT hiss on first tick
+        if (this.stateTimer == FUSE_TICKS) {
+            this.saboteur.level().playSound(null, tntPlacedPos,
+                    SoundEvents.TNT_PRIMED, SoundSource.BLOCKS, 1.0F, 1.0F);
+        }
+
+        // Smoke particles every few ticks
+        if (this.stateTimer % 4 == 0 && this.saboteur.level() instanceof ServerLevel serverLevel) {
+            serverLevel.sendParticles(ParticleTypes.SMOKE,
+                    tntPlacedPos.getX() + 0.5, tntPlacedPos.getY() + 1.0, tntPlacedPos.getZ() + 0.5,
+                    3, 0.2, 0.1, 0.2, 0.01);
+        }
+
         this.stateTimer--;
-        if (this.stateTimer <= 0 && this.tntPlacedPos != null) {
-            // Ignite the TNT
+
+        // Fuse done — detonate
+        if (this.stateTimer <= 0) {
             if (this.saboteur.level().getBlockState(this.tntPlacedPos).is(Blocks.TNT)) {
                 TntBlock.explode(this.saboteur.level(), this.tntPlacedPos);
                 this.saboteur.level().removeBlock(this.tntPlacedPos, false);
             }
+            this.saboteur.setShiftKeyDown(false);
             this.state = State.FLEEING;
-            this.stateTimer = 100; // flee for 5 seconds
+            this.stateTimer = 100;
             flee();
         }
     }
@@ -180,7 +222,6 @@ public class SaboteurPlaceTNTGoal extends Goal {
             if (claim.getOwnerFaction() == null) continue;
             String claimFaction = claim.getOwnerFaction().getStringID();
 
-            // Check if this claim belongs to an enemy
             if (claimFaction.equals(ownTeam)) continue;
 
             RecruitsDiplomacyManager.DiplomacyStatus relation =

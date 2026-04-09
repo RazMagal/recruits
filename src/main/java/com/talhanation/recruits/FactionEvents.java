@@ -8,7 +8,6 @@ import com.talhanation.recruits.network.*;
 import com.talhanation.recruits.util.DelayedExecutor;
 import com.talhanation.recruits.world.*;
 import net.minecraft.ChatFormatting;
-import net.minecraft.core.BlockPos;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.core.Holder;
 import net.minecraft.nbt.CompoundTag;

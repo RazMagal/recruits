@@ -9,6 +9,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.util.RandomSource;
 import net.minecraft.world.DifficultyInstance;
 import net.minecraft.world.entity.*;
+import net.minecraft.world.entity.EquipmentSlot;
 import net.minecraft.world.entity.ai.attributes.AttributeSupplier;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.item.ItemEntity;
@@ -73,6 +74,9 @@ public class MortarmanEntity extends AbstractRecruitEntity implements IRangedRec
         this.setRandomSpawnBonus();
         this.setPersistenceRequired();
 
+        // Ensure main hand holds a mortar round (config may have stale sword values)
+        this.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(com.talhanation.recruits.init.ModItems.MORTAR_ROUND.get()));
+
         // Give 5 mortar rounds in slot 6
         ItemStack rounds = new ItemStack(com.talhanation.recruits.init.ModItems.MORTAR_ROUND.get());
         rounds.setCount(5);
@@ -106,7 +110,7 @@ public class MortarmanEntity extends AbstractRecruitEntity implements IRangedRec
 
     @Override
     public Predicate<ItemStack> getWeaponType() {
-        return itemStack -> itemStack.getItem() instanceof SwordItem;
+        return itemStack -> itemStack.getItem() instanceof MortarRoundItem;
     }
 
     @Override

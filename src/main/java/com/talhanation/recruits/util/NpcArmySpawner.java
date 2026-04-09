@@ -162,7 +162,7 @@ public class NpcArmySpawner {
     }
 
     private static void equipRocketeer(RocketeerEntity recruit) {
-        recruit.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_SWORD));
+        recruit.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(ModItems.ROCKET_ITEM.get()));
         recruit.setItemSlot(EquipmentSlot.CHEST, new ItemStack(Items.LEATHER_CHESTPLATE));
 
         ItemStack rockets = new ItemStack(ModItems.ROCKET_ITEM.get());
@@ -171,7 +171,7 @@ public class NpcArmySpawner {
     }
 
     private static void equipMortarman(MortarmanEntity recruit) {
-        recruit.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.STONE_SWORD));
+        recruit.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(ModItems.MORTAR_ROUND.get()));
         recruit.setItemSlot(EquipmentSlot.CHEST, new ItemStack(Items.IRON_CHESTPLATE));
 
         ItemStack rounds = new ItemStack(ModItems.MORTAR_ROUND.get());
@@ -183,7 +183,7 @@ public class NpcArmySpawner {
             ServerLevel level, BlockPos spawnPos, PlayerTeam team, VillagerNobleEntity noble
     ) {
         SaboteurEntity saboteur = ModEntityTypes.SABOTEUR.get().create(level);
-        saboteur.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.IRON_SWORD));
+        saboteur.setItemSlot(EquipmentSlot.MAINHAND, new ItemStack(Items.TNT));
         saboteur.setItemSlot(EquipmentSlot.CHEST, new ItemStack(Items.LEATHER_CHESTPLATE));
         saboteur.setItemSlot(EquipmentSlot.FEET, new ItemStack(Items.LEATHER_BOOTS));
 

@@ -15,7 +15,6 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.scores.PlayerTeam;
 import net.minecraft.world.scores.Scoreboard;
-import net.minecraft.world.scores.Team;
 import net.minecraftforge.network.PacketDistributor;
 
 import javax.annotation.Nullable;
