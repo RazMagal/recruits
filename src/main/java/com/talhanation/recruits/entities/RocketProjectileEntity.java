@@ -49,7 +49,7 @@ public class RocketProjectileEntity extends AbstractHurtingProjectile implements
     }
 
     private void explode() {
-        this.level().explode(this, this.getX(), this.getY(), this.getZ(), 1.5F, Level.ExplosionInteraction.NONE);
+        this.level().explode(this, this.getX(), this.getY(), this.getZ(), 1.5F, Level.ExplosionInteraction.MOB);
     }
 
     @Override

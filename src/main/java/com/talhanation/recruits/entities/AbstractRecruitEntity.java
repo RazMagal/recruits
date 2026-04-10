@@ -1167,7 +1167,7 @@ public abstract class AbstractRecruitEntity extends AbstractInventoryEntity{
 
                 return InteractionResult.SUCCESS;
             }
-            if(this instanceof VillagerNobleEntity noble && !noble.isTrading){
+            if(this instanceof VillagerNobleEntity noble){
                 noble.openTradeGUI(player);
                 return InteractionResult.SUCCESS;
             }
@@ -1204,6 +1204,7 @@ public abstract class AbstractRecruitEntity extends AbstractInventoryEntity{
             else if(this.isOwned() && this.getTeam() != null && !player.getUUID().equals(this.getOwnerUUID()) &&
                     FactionEvents.recruitsFactionManager.getFactionByStringID(this.getTeam().getName()).getTeamLeaderUUID().equals(player.getUUID())){
                     Main.SIMPLE_CHANNEL.send(PacketDistributor.PLAYER.with(() -> (ServerPlayer) player), new MessageToClientOpenTakeOverScreen(this.getUUID()));
+                    return InteractionResult.SUCCESS;
             }
             else if (!this.isOwned() && !isPlayerTarget && this.canBeHired()) {
                 this.openHireGUI(player);
