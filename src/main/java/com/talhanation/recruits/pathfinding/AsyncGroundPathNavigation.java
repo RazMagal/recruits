@@ -143,7 +143,7 @@ public class AsyncGroundPathNavigation extends AsyncPathNavigation {
     }
 
     public boolean canOpenDoors() {
-        return this.nodeEvaluator.canPassDoors();
+        return this.nodeEvaluator.canOpenDoors();
     }
 
     public void setAvoidSun(boolean p_26491_) {

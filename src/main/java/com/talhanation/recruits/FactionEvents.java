@@ -130,7 +130,7 @@ public class FactionEvents {
         if (team != null) {
             serverPlayer.sendSystemMessage(Component.translatable("chat.recruits.team_creation.team_exists").withStyle(ChatFormatting.RED));
         }
-        else if (teamName.chars().count() > 32) {
+        else if (teamName.strip().chars().count() > 32) {
             serverPlayer.sendSystemMessage(Component.translatable("chat.recruits.team_creation.teamname_to_long").withStyle(ChatFormatting.RED));
         }
         else if (teamName.isBlank() || teamName.isEmpty()) {
@@ -309,7 +309,8 @@ public class FactionEvents {
 
 
             for(RecruitsClaim claim : ClaimEvents.recruitsClaimManager.getAllClaims()){
-                if(claim.getOwnerFaction().getStringID().equals(editedTeam.getStringID())){
+                RecruitsFaction owner = claim.getOwnerFaction();
+                if(owner != null && owner.getStringID().equals(editedTeam.getStringID())){
                     claim.setOwnerFaction(editedTeam);
                 }
             }
@@ -341,7 +342,8 @@ public class FactionEvents {
             removeRecruitsFactionData(teamName);
 
             for(RecruitsClaim claim : ClaimEvents.recruitsClaimManager.getAllClaims()){
-                if(claim.getOwnerFaction().getStringID().equals(teamName)){
+                RecruitsFaction owner = claim.getOwnerFaction();
+                if(owner != null && owner.getStringID().equals(teamName)){
                     ClaimEvents.recruitsClaimManager.removeClaim(claim);
                 }
             }

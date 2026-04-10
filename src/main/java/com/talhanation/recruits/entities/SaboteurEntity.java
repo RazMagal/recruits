@@ -86,7 +86,7 @@ public class SaboteurEntity extends AbstractRecruitEntity {
 
     @Override
     public boolean canHoldItem(ItemStack itemStack) {
-        return !(itemStack.getItem() instanceof BowItem || itemStack.getItem() instanceof CrossbowItem);
+        return !(itemStack.getItem() instanceof BowItem || itemStack.getItem() instanceof CrossbowItem || itemStack.getItem() instanceof ShieldItem);
     }
 
     @Override

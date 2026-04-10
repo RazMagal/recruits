@@ -14,6 +14,7 @@ import com.talhanation.recruits.config.RecruitsServerConfig;
 import com.talhanation.recruits.init.*;
 import com.talhanation.recruits.network.*;
 import de.maxhenkel.corelib.CommonRegistry;
+import de.maxhenkel.corelib.net.Message;
 import net.minecraft.world.item.CreativeModeTabs;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
@@ -29,6 +30,7 @@ import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLPaths;
+import net.minecraftforge.network.NetworkEvent;
 import net.minecraftforge.network.simple.SimpleChannel;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -190,12 +192,14 @@ public class Main {
                 MessageSendTreaty.class,
                 MessageAnswerTreaty.class,
                 MessageToClientOpenTreatyAnswerScreen.class,
-                MessageToClientUpdateTreaties.class
+                MessageToClientUpdateTreaties.class,
+                MessageDebugScreen.class,
+                MessageToClientUpdateMessengerScreen.class
         };
 
 
         for (int i = 0; i < messages.length; i++){
-            CommonRegistry.registerMessage(SIMPLE_CHANNEL, i, messages[i]);
+            registerMessage(SIMPLE_CHANNEL, i, messages[i]);
         }
 
 
@@ -211,6 +215,39 @@ public class Main {
             String smallshipsversion = ModList.get().getModFileById("smallships").versionString();//2.0.0-a2.3.1 above shall be supported e.g.: "2.0.0-b1.1"
             isSmallShipsCompatible = smallshipsversion.contains("2.0.0-b1.3")||smallshipsversion.contains("2.0.0-b1.4");//TODO: Better Version check for compatible smallships versions
         }
+    }
+
+    /**
+     * Replacement for corelib's {@link CommonRegistry#registerMessage} that also marks the
+     * packet as handled on the context. Without this, Forge's {@code NetworkHooks.onCustomPayload}
+     * returns {@code false} and the vanilla client logs
+     * {@code "Unknown custom packet identifier: recruits:default"} even though the message
+     * handler did run. See corelib 1.0.0 for 1.20.1.
+     */
+    @SuppressWarnings({"unchecked", "rawtypes"})
+    private static <T extends Message> void registerMessage(SimpleChannel channel, int index, Class<T> messageClass) {
+        channel.messageBuilder(messageClass, index)
+                .encoder((msg, buf) -> msg.toBytes(buf))
+                .decoder(buf -> {
+                    try {
+                        T msg = messageClass.getDeclaredConstructor().newInstance();
+                        msg.fromBytes(buf);
+                        return msg;
+                    } catch (ReflectiveOperationException e) {
+                        throw new RuntimeException("Failed to instantiate " + messageClass.getName(), e);
+                    }
+                })
+                .consumerNetworkThread((msg, ctxSupplier) -> {
+                    NetworkEvent.Context ctx = ctxSupplier.get();
+                    if (msg.getExecutingSide() == Dist.CLIENT) {
+                        ctx.enqueueWork(() -> msg.executeClientSide(ctx));
+                    } else if (msg.getExecutingSide() == Dist.DEDICATED_SERVER) {
+                        ctx.enqueueWork(() -> msg.executeServerSide(ctx));
+                    }
+                    ctx.setPacketHandled(true);
+                    return true;
+                })
+                .add();
     }
 
     @SubscribeEvent

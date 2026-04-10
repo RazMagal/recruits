@@ -60,10 +60,10 @@ public abstract class RecruitsDoorInteractGoal extends Goal {
                 BlockPos blockPos = this.doorPos.relative(direction);
                 BlockState state = this.recruit.getCommandSenderWorld().getBlockState(blockPos);
                 if (state.getBlock() instanceof FenceGateBlock) {
-                    useGate(blockstate, this.recruit.getCommandSenderWorld(), blockPos, this.recruit);
+                    useGate(state, this.recruit.getCommandSenderWorld(), blockPos, this.recruit);
                 }
                 else if (state.getBlock() instanceof DoorBlock doorBlock) {
-                    doorBlock.setOpen(this.recruit, this.recruit.getCommandSenderWorld(), blockstate, this.doorPos, open);
+                    doorBlock.setOpen(this.recruit, this.recruit.getCommandSenderWorld(), state, blockPos, open);
                 }
             }
         }

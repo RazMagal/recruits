@@ -19,6 +19,9 @@ public class RecruitRangedRocketAttackGoal extends Goal {
     private int seeTime;
 
     private static final int COOLDOWN_TICKS = 160; // 8 seconds
+    // Rockets explode with ~1.5 radius; stay outside the blast.
+    private static final float MIN_FIRE_RANGE = 6.0F;
+    private static final float MIN_FIRE_RANGE_SQR = MIN_FIRE_RANGE * MIN_FIRE_RANGE;
 
     public RecruitRangedRocketAttackGoal(AbstractRecruitEntity recruit, double speedModifier, float attackRadius) {
         this.recruit = recruit;
@@ -72,8 +75,19 @@ public class RecruitRangedRocketAttackGoal extends Goal {
             this.seeTime = 0;
         }
 
-        // Move toward target if out of range
-        if (distSqr > (double) this.attackRadiusSqr || !canSee) {
+        // Back away if dangerously close (inside own blast radius)
+        if (distSqr < (double) MIN_FIRE_RANGE_SQR) {
+            double bx = this.recruit.getX() - target.getX();
+            double bz = this.recruit.getZ() - target.getZ();
+            double blen = Math.sqrt(bx * bx + bz * bz);
+            if (blen > 0) {
+                this.recruit.getNavigation().moveTo(
+                        this.recruit.getX() + (bx / blen) * 8,
+                        this.recruit.getY(),
+                        this.recruit.getZ() + (bz / blen) * 8,
+                        this.speedModifier);
+            }
+        } else if (distSqr > (double) this.attackRadiusSqr || !canSee) {
             this.recruit.getNavigation().moveTo(target, this.speedModifier);
         } else {
             this.recruit.getNavigation().stop();
@@ -86,7 +100,7 @@ public class RecruitRangedRocketAttackGoal extends Goal {
             return;
         }
 
-        if (canSee && distSqr <= (double) this.attackRadiusSqr && this.seeTime >= 5) {
+        if (canSee && distSqr >= (double) MIN_FIRE_RANGE_SQR && distSqr <= (double) this.attackRadiusSqr && this.seeTime >= 5) {
             this.fireRocket(target);
             this.attackCooldown = COOLDOWN_TICKS;
         }

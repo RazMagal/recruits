@@ -47,7 +47,7 @@ public class RecruitsClaimManager {
 
     public void removeClaim(RecruitsClaim claim) {
         if (claim != null) {
-            claims.entrySet().removeIf(entry -> entry.getValue().equals(claim));
+            claims.entrySet().removeIf(entry -> entry.getValue().getUUID().equals(claim.getUUID()));
         }
     }
 

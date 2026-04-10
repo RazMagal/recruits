@@ -186,7 +186,8 @@ public class NpcFactionAIManager {
 
     private RecruitsClaim findFactionClaim(RecruitsFaction faction) {
         for (RecruitsClaim claim : ClaimEvents.recruitsClaimManager.getAllClaims()) {
-            if (claim.getOwnerFaction().getStringID().equals(faction.getStringID())) {
+            RecruitsFaction owner = claim.getOwnerFaction();
+            if (owner != null && owner.getStringID().equals(faction.getStringID())) {
                 return claim;
             }
         }
@@ -389,14 +390,16 @@ public class NpcFactionAIManager {
         Set<ChunkPos> chunksA = new HashSet<>();
 
         for (RecruitsClaim claim : allClaims) {
-            if (claim.getOwnerFaction().getStringID().equals(a.getStringID())) {
+            RecruitsFaction owner = claim.getOwnerFaction();
+            if (owner != null && owner.getStringID().equals(a.getStringID())) {
                 chunksA.addAll(claim.getClaimedChunks());
             }
         }
         if (chunksA.isEmpty()) return false;
 
         for (RecruitsClaim claim : allClaims) {
-            if (!claim.getOwnerFaction().getStringID().equals(b.getStringID())) continue;
+            RecruitsFaction owner = claim.getOwnerFaction();
+            if (owner == null || !owner.getStringID().equals(b.getStringID())) continue;
             for (ChunkPos cb : claim.getClaimedChunks()) {
                 for (ChunkPos ca : chunksA) {
                     if (Math.abs(ca.x - cb.x) + Math.abs(ca.z - cb.z) <= 2) return true;
@@ -471,7 +474,8 @@ public class NpcFactionAIManager {
         double nearestDist = Double.MAX_VALUE;
 
         for (RecruitsClaim claim : ClaimEvents.recruitsClaimManager.getAllClaims()) {
-            if (!enemies.contains(claim.getOwnerFaction().getStringID())) continue;
+            RecruitsFaction owner = claim.getOwnerFaction();
+            if (owner == null || !enemies.contains(owner.getStringID())) continue;
             if (claim.isUnderSiege) continue;
 
             double dist = claim.getCenter().getMiddleBlockPosition(0).distSqr(center);

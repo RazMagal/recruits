@@ -302,11 +302,68 @@ public abstract class AbstractInventoryEntity extends AsyncPathfinderMob {
     public boolean canEquipItem(@NotNull ItemStack itemStack) {
         if(!itemStack.isEmpty()) {
             EquipmentSlot equipmentslot = getEquipmentSlotForItem(itemStack);
+                // Prevent non-hand items (arrows, food, blocks, etc.) from being placed into
+                // MAINHAND/OFFHAND. Without this, recruits whose weapon broke will grab the
+                // first junk item in their inventory (arrow, rotten flesh, shield, ...) and
+                // hold it in the wrong slot.
+                if ((equipmentslot == MAINHAND || equipmentslot == OFFHAND)
+                        && !isValidForHandSlot(itemStack, equipmentslot)) {
+                    return false;
+                }
                 ItemStack currentArmor = this.getItemBySlot(equipmentslot);
                 boolean flag = this.canReplaceCurrentItem(itemStack, currentArmor);
                 return flag && this.canHoldItem(itemStack);
         }
         return false;
+    }
+
+    /**
+     * Returns true if an item is legitimately meant to be held in the given hand slot.
+     * - MAINHAND: weapons/tools/projectile weapons/mod weapons/TNT
+     * - OFFHAND: shields (shield-block tool-action) only
+     *
+     * Used to keep non-weapons (arrows, food, blocks, ingredients, ...) out of MAINHAND/OFFHAND
+     * and to prevent shields from being auto-equipped to MAINHAND.
+     */
+    public static boolean isValidForHandSlot(ItemStack itemStack, EquipmentSlot slot) {
+        Item item = itemStack.getItem();
+        boolean isShield = item instanceof ShieldItem
+                || itemStack.canPerformAction(net.minecraftforge.common.ToolActions.SHIELD_BLOCK);
+        if (slot == OFFHAND) {
+            return isShield;
+        }
+        if (slot != MAINHAND) {
+            return false;
+        }
+        // Main hand: only real weapons/tools/mod weapons. Shields not allowed here.
+        if (isShield) {
+            return false;
+        }
+        if (item instanceof SwordItem
+                || item instanceof DiggerItem
+                || item instanceof BowItem
+                || item instanceof CrossbowItem
+                || item instanceof TridentItem
+                || item instanceof ProjectileWeaponItem
+                || item instanceof com.talhanation.recruits.items.MortarRoundItem
+                || item instanceof com.talhanation.recruits.items.RocketItem
+                || item instanceof com.talhanation.recruits.items.RockItem
+                || item instanceof com.talhanation.recruits.items.BackTabItem) {
+            return true;
+        }
+        // Musket mod weapons (crossbowman) — identified by description id, not by class.
+        // Note: IWeapon.isMusketModWeapon also returns true for cartridges (ammo), so
+        // check for actual weapons specifically to keep cartridges out of the hand slot.
+        String id = itemStack.getDescriptionId();
+        if (id.equals("item.musketmod.musket")
+                || id.equals("item.musketmod.musket_with_bayonet")
+                || id.equals("item.musketmod.musket_with_scope")
+                || id.equals("item.musketmod.blunderbuss")
+                || id.equals("item.musketmod.pistol")) {
+            return true;
+        }
+        // Saboteur holds TNT as its weapon.
+        return itemStack.is(Items.TNT);
     }
 
     public boolean hasSameTypeOfItem(ItemStack stack) {
@@ -323,6 +380,12 @@ public abstract class AbstractInventoryEntity extends AsyncPathfinderMob {
     }
     public boolean canEquipItemToSlot(@NotNull ItemStack itemStack, EquipmentSlot slot) {
         if(!itemStack.isEmpty()) {
+            // Same hand-slot guard as canEquipItem: keep arrows/food/junk out of MAINHAND/OFFHAND
+            // and prevent shields from being placed in MAINHAND. tryToReequip would otherwise
+            // dump the first non-bow/crossbow/sword inventory item into the empty slot.
+            if ((slot == MAINHAND || slot == OFFHAND) && !isValidForHandSlot(itemStack, slot)) {
+                return false;
+            }
             ItemStack currentArmor = this.getItemBySlot(slot);
             boolean flag = this.canReplaceCurrentItem(itemStack, currentArmor);
 

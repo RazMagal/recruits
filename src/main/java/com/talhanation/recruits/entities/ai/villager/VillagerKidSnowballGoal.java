@@ -25,27 +25,26 @@ public class VillagerKidSnowballGoal extends Goal {
     public boolean canUse() {
         if (!this.villager.isBaby()) return false;
         if (!RecruitsServerConfig.VillageKidsThrowSnowballs.get()) return false;
-        if (this.villager.getCommandSenderWorld().isClientSide()) return false;
+        if (this.villager.level().isClientSide()) return false;
 
-        List<LivingEntity> nearby = this.villager.getCommandSenderWorld().getEntitiesOfClass(
+        List<LivingEntity> nearby = this.villager.level().getEntitiesOfClass(
                 LivingEntity.class,
                 this.villager.getBoundingBox().inflate(16),
                 e -> e.isAlive() && (e instanceof Player || e instanceof AbstractRecruitEntity) && !isSameTeam(e)
         );
 
-        if (nearby.isEmpty()) {
-            this.target = null;
-            return false;
-        }
+        if (nearby.isEmpty()) return false;
 
         // Pick closest
-        this.target = nearby.stream()
+        LivingEntity closest = nearby.stream()
                 .min((a, b) -> Double.compare(
                         this.villager.distanceToSqr(a),
                         this.villager.distanceToSqr(b)))
                 .orElse(null);
 
-        return this.target != null;
+        if (closest == null) return false;
+        this.target = closest;
+        return true;
     }
 
     @Override

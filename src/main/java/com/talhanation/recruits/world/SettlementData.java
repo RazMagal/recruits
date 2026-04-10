@@ -94,7 +94,8 @@ public class SettlementData {
         };
 
         // Round-robin: prioritize unbuilt types first, then lowest fill ratio
-        for (int t = 0; t <= Math.min(tier, 2); t++) {
+        int maxIndex = Math.min(tier, priorities.length - 1);
+        for (int t = 0; t <= maxIndex; t++) {
             // First pass: any type not yet built at all
             for (SettlementStructureType type : priorities[t]) {
                 if (canBuild(type) && getCountOf(type) == 0) return type;

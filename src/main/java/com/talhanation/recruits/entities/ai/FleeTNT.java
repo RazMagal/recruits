@@ -12,7 +12,7 @@ import java.util.List;
 public class FleeTNT extends Goal {
 
     private final AsyncPathfinderMob entity;
-    private int cooldown = 0;
+    private List<PrimedTnt> nearbyTnt = List.of();
 
     public FleeTNT(AsyncPathfinderMob creatureEntity) {
         this.entity = creatureEntity;
@@ -20,15 +20,27 @@ public class FleeTNT extends Goal {
 
     @Override
     public boolean canUse() {
-        return true;
+        this.nearbyTnt = entity.level().getEntitiesOfClass(
+                PrimedTnt.class,
+                entity.getBoundingBox().inflate(10D)
+        );
+        return !this.nearbyTnt.isEmpty();
+    }
+
+    @Override
+    public boolean canContinueToUse() {
+        return canUse();
+    }
+
+    @Override
+    public void stop() {
+        setFleeing(false);
+        this.nearbyTnt = List.of();
     }
 
     @Override
     public void tick() {
-        List<PrimedTnt> tntEntities = entity.getCommandSenderWorld().getEntitiesOfClass(
-                PrimedTnt.class,
-                entity.getBoundingBox().inflate(10D)
-        );
+        List<PrimedTnt> tntEntities = this.nearbyTnt;
         if (tntEntities.isEmpty()) {
             setFleeing(false);
             return;

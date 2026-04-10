@@ -132,9 +132,39 @@ public class SettlementBuilder {
 
         if (boundary.isEmpty()) return null;
 
-        List<BlockPos> candidates = new ArrayList<>();
+        // For walls: prefer boundary chunks adjacent to already-placed walls so the
+        // ring grows consecutively rather than scattering around the perimeter.
+        if (type == SettlementStructureType.WALL_SEGMENT) {
+            Set<ChunkPos> existingWallChunks = new HashSet<>();
+            for (SettlementStructure s : data.getStructures()) {
+                if (s.getType() == SettlementStructureType.WALL_SEGMENT) {
+                    existingWallChunks.add(new ChunkPos(s.getOrigin()));
+                }
+            }
+            if (!existingWallChunks.isEmpty()) {
+                boundary.sort(Comparator.comparingInt(cp -> {
+                    int best = Integer.MAX_VALUE;
+                    for (ChunkPos w : existingWallChunks) {
+                        int d = Math.abs(cp.x - w.x) + Math.abs(cp.z - w.z);
+                        if (d > 0 && d < best) best = d;
+                    }
+                    return best;
+                }));
+            } else {
+                // First wall: start at the chunk furthest from center
+                boundary.sort(Comparator.comparingDouble(cp ->
+                        -((cp.getMiddleBlockX() - center.getX()) * (double)(cp.getMiddleBlockX() - center.getX())
+                        + (cp.getMiddleBlockZ() - center.getZ()) * (double)(cp.getMiddleBlockZ() - center.getZ()))));
+            }
+        } else {
+            // For watchtowers / gates / corner towers: prefer furthest from center
+            boundary.sort(Comparator.comparingDouble(cp ->
+                    -((cp.getMiddleBlockX() - center.getX()) * (double)(cp.getMiddleBlockX() - center.getX())
+                    + (cp.getMiddleBlockZ() - center.getZ()) * (double)(cp.getMiddleBlockZ() - center.getZ()))));
+        }
+
+        // Walk the ordered boundary and return the first chunk that yields a valid placement.
         for (ChunkPos cp : boundary) {
-            // Try center of chunk
             int x = cp.getMiddleBlockX();
             int z = cp.getMiddleBlockZ();
             int y = level.getHeight(Heightmap.Types.WORLD_SURFACE, x, z);
@@ -142,15 +172,10 @@ public class SettlementBuilder {
 
             if (isTerrainSuitable(level, pos, type.getSizeX(), type.getSizeZ())
                     && !overlapsExisting(pos, type, data)) {
-                candidates.add(pos);
+                return pos;
             }
         }
-
-        if (candidates.isEmpty()) return null;
-
-        // For walls/watchtowers: prefer positions furthest from center (outer boundary)
-        candidates.sort(Comparator.comparingDouble(p -> -p.distSqr(center)));
-        return candidates.get(0);
+        return null;
     }
 
     static boolean isTerrainSuitable(ServerLevel level, BlockPos pos, int sizeX, int sizeZ) {
@@ -176,7 +201,9 @@ public class SettlementBuilder {
     }
 
     private static boolean overlapsExisting(BlockPos pos, SettlementStructureType type, SettlementData data) {
-        int margin = 4;
+        // Wall segments are tiny perimeter pieces and need to sit next to each other,
+        // so they get no margin. Other structures keep a buffer to avoid clipping.
+        int margin = type == SettlementStructureType.WALL_SEGMENT ? 0 : 4;
         int minX = pos.getX() - margin;
         int maxX = pos.getX() + type.getSizeX() + margin;
         int minZ = pos.getZ() - margin;
